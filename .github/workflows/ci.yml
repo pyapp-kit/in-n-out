@@ -57,12 +57,18 @@ jobs:
 
   test-compiled:
     name: py${{ matrix.python-version }} cythonized
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform }}
 
     strategy:
       fail-fast: true
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
+        platform: ["ubuntu-latest"]
+        include:
+          - platform: "windows-latest"
+            python-version: "3.10"
+          - platform: "macos-latest"
+            python-version: "3.10"
 
     steps:
       - uses: actions/checkout@v3

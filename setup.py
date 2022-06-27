@@ -1,10 +1,14 @@
 import contextlib
 import os
+import sys
 
 import setuptools
 
 ext_modules = None
-if not os.getenv("SKIP_CYTHON"):
+if (
+    all(arg not in sys.argv for arg in ["clean", "check"])
+    and "SKIP_CYTHON" not in os.environ
+):
     with contextlib.suppress(ImportError):
         from Cython.Build import cythonize
 
