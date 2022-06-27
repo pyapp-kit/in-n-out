@@ -9,11 +9,8 @@ name = "in-n-out"
 description = " plugable dependency injection and result processing"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {file = "LICENSE"}
-authors = [
-  {email = "talley.lambert@gmail.com"},
-  {name = "Talley Lambert"},
-]
+license = { file = "LICENSE" }
+authors = [{ email = "talley.lambert@gmail.com" }, { name = "Talley Lambert" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: BSD License",
@@ -28,10 +25,7 @@ dependencies = []
 # extras
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies
 [project.optional-dependencies]
-test = [
-    "pytest>=6.0",
-    "pytest-cov",
-]
+test = ["pytest>=6.0", "pytest-cov"]
 dev = [
     "black",
     "cruft",
@@ -39,7 +33,7 @@ dev = [
     "flake8-docstrings",
     "flake8-pyprojecttoml",
     "flake8-typing-imports",
-    "flake8-walrus",  # cause cython
+    "flake8-walrus",         # cause cython
     "flake8",
     "ipython",
     "isort",
@@ -51,6 +45,7 @@ dev = [
     "pytest",
     "rich",
 ]
+build = ["Cython>=3.0a7;sys_platform != 'win32'"]
 
 [project.urls]
 homepage = "https://github.com/tlambert03/in-n-out"
@@ -69,7 +64,7 @@ repository = "https://github.com/tlambert03/in-n-out"
 [tool.setuptools]
 zip-safe = false
 include-package-data = true
-packages = {find = {where = ["src"], exclude=[]}}
+packages = { find = { where = ["src"], exclude = [] } }
 
 
 # https://github.com/pypa/setuptools_scm/#pyprojecttoml-usage
@@ -96,9 +91,7 @@ D105  # missing docstring in magic method
 D401  # imperative mood
 W503  # line break before binary operator
 """
-per-file-ignores = [
-    "tests/*:D",
-]
+per-file-ignores = ["tests/*:D"]
 
 
 # http://www.pydocstyle.org/en/stable/usage.html
@@ -112,9 +105,7 @@ ignore = "D100,D213,D401,D413,D107"
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
-filterwarnings = [
-    "error",
-]
+filterwarnings = ["error"]
 
 # https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
@@ -142,19 +133,19 @@ skip = ["tests"]
 # https://github.com/mgedmin/check-manifest#configuration
 [tool.check-manifest]
 ignore = [
-  ".cruft.json",
-  ".flake8",
-  ".github_changelog_generator",
-  ".pre-commit-config.yaml",
-  "tests/**/*",
-  "**/*.c",
-  "tox.ini",
+    ".cruft.json",
+    ".flake8",
+    ".github_changelog_generator",
+    ".pre-commit-config.yaml",
+    "tests/**/*",
+    "**/*.c",
+    "tox.ini",
 ]
 
 # https://python-semantic-release.readthedocs.io/en/latest/configuration.html
 [tool.semantic_release]
 version_source = "tag_only"
 branch = "main"
-changelog_sections="feature,fix,breaking,documentation,performance,chore,:boom:,:sparkles:,:children_crossing:,:lipstick:,:iphone:,:egg:,:chart_with_upwards_trend:,:ambulance:,:lock:,:bug:,:zap:,:goal_net:,:alien:,:wheelchair:,:speech_balloon:,:mag:,:apple:,:penguin:,:checkered_flag:,:robot:,:green_apple:,Other"
+changelog_sections = "feature,fix,breaking,documentation,performance,chore,:boom:,:sparkles:,:children_crossing:,:lipstick:,:iphone:,:egg:,:chart_with_upwards_trend:,:ambulance:,:lock:,:bug:,:zap:,:goal_net:,:alien:,:wheelchair:,:speech_balloon:,:mag:,:apple:,:penguin:,:checkered_flag:,:robot:,:green_apple:,Other"
 # commit_parser=semantic_release.history.angular_parser
 build_command = "pip install build && python -m build"

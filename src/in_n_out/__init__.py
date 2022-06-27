@@ -17,8 +17,10 @@ from ._type_resolution import (
     resolve_type_hints,
     type_resolved_signature,
 )
+from ._util import _compiled
 
 __all__ = [
+    "_compiled",
     "get_processor",
     "get_provider",
     "inject_dependencies",

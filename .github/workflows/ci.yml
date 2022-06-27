@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ["3.8", "3.9", "3.10"]
         platform: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -54,6 +54,54 @@ jobs:
 
       - name: Coverage
         uses: codecov/codecov-action@v3
+
+  test-compiled:
+    name: py${{ matrix.python-version }} cythonized
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"]
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: install
+        run: |
+          python -m pip install -U wheel pip
+          pip install -e .[test,build]
+        env:
+          SKIP_CYTHON: 1
+
+      - name: compile
+        run: |
+          python setup.py build_ext --force --inplace --define CYTHON_TRACE
+          python -c "import sys, in_n_out; print('compiled:', in_n_out._compiled); sys.exit(0 if in_n_out._compiled else 1)"
+          ls -alh
+          ls -alh in_n_out/
+
+      - name: test
+        run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-report=term-missing
+
+      - name: remove compiled binaries
+        run: |
+          pip uninstall -y cython
+          rm -rf in_n_out/*.so in_n_out/*.c in_n_out/__pycache__
+          ls -alh
+          ls -alh in_n_out/
+
+      - name: test uncompiled
+        run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-append
+
+      - name: Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          fail_ci_if_error: true
+          verbose: true
 
   deploy:
     name: Deploy
