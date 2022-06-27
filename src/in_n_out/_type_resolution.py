@@ -14,7 +14,7 @@ PY39_OR_GREATER = sys.version_info >= (3, 9)
 
 
 @lru_cache(maxsize=1)
-def _typing_names():
+def _typing_names() -> Dict[str, Any]:
     return {**typing.__dict__, **types.__dict__}  # noqa: TYP006
 
 
@@ -80,7 +80,7 @@ def resolve_single_type_hints(
     >>> resolve_single_type_hints('hi', localns={'hi': typing.Any})
     (typing.Any,)
     """
-    kwargs = dict(localns=localns)
+    kwargs: Dict[str, Any] = dict(localns=localns)
     if PY39_OR_GREATER:
         kwargs["include_extras"] = include_extras
 

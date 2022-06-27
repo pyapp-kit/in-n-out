@@ -41,7 +41,8 @@ def get_processor(type_: Type[T]) -> Optional[Callable[[T], Any]]:
     if isinstance(type_, type):
         for key, val in _PROCESSORS.items():
             if isinstance(key, type) and issubclass(type_, key):
-                return val  # type: ignore [return-type]
+                return val
+    return None
 
 
 class set_processors:
@@ -69,7 +70,7 @@ class set_processors:
     """
 
     def __init__(
-        self, mapping: Dict[Type[T], Callable[..., Optional[T]]], clobber=False
+        self, mapping: Dict[Type[T], Callable[..., Optional[T]]], clobber: bool = False
     ):
         self._before = {}
         for k in mapping:
@@ -80,12 +81,12 @@ class set_processors:
             self._before[k] = _PROCESSORS.get(k, _NULL)
         _PROCESSORS.update(mapping)
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         return None
 
-    def __exit__(self, *_):
+    def __exit__(self, *_: Any) -> None:
         for key, val in self._before.items():
             if val is _NULL:
                 del _PROCESSORS[key]
             else:
-                _PROCESSORS[key] = val
+                _PROCESSORS[key] = val  # type: ignore[assignment]

@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, cast
 
 from typing_extensions import get_args, get_origin, get_type_hints
 
@@ -11,6 +11,7 @@ _NULL = object()
 # where each value is a function that is capable
 # of retrieving an instance of its corresponding key type.
 _PROVIDERS: Dict[Type, Callable[..., Optional[object]]] = {}
+Provider = Callable[..., Optional[T]]
 
 
 def provider(func: C) -> C:
@@ -34,7 +35,7 @@ def provider(func: C) -> C:
     return func
 
 
-def get_provider(type_: Union[Any, Type[T]]) -> Optional[Callable[..., Optional[T]]]:
+def get_provider(type_: Union[Any, Type[T]]) -> Optional[Provider]:
     """Return object provider function given a type.
 
     An object provider is a function that returns an instance of a
@@ -45,12 +46,12 @@ def get_provider(type_: Union[Any, Type[T]]) -> Optional[Callable[..., Optional[
     type hints.
     """
     if type_ in _PROVIDERS:
-        return _PROVIDERS[type_]
+        return cast(Provider, _PROVIDERS[type_])
 
     if isinstance(type_, type):
         for key, val in _PROVIDERS.items():
             if issubclass(type_, key):
-                return val  # type: ignore [return-type]
+                return cast(Provider, val)
     return None
 
 
@@ -78,8 +79,8 @@ class set_providers:
     """
 
     def __init__(
-        self, mapping: Dict[Type[T], Callable[..., Optional[T]]], clobber=False
-    ):
+        self, mapping: Dict[Type[T], Callable[..., Optional[T]]], clobber: bool = False
+    ) -> None:
         self._before = {}
         for k in mapping:
             if k in _PROVIDERS and not clobber:
@@ -89,12 +90,12 @@ class set_providers:
             self._before[k] = _PROVIDERS.get(k, _NULL)
         _PROVIDERS.update(mapping)
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         return None
 
-    def __exit__(self, *_):
+    def __exit__(self, *_: Any) -> None:
         for key, val in self._before.items():
             if val is _NULL:
                 del _PROVIDERS[key]
             else:
-                _PROVIDERS[key] = val
+                _PROVIDERS[key] = val  # type: ignore

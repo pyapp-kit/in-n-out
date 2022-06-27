@@ -133,7 +133,7 @@ def inject_dependencies(
     if isgeneratorfunction(func):
 
         @wraps(func)
-        def _gexec(*args, **kwargs):
+        def _gexec(*args: P.args, **kwargs: P.kwargs) -> R:  # type: ignore [misc]
             yield from _exec(*args, **kwargs)  # type: ignore [misc]
 
         out = _gexec
@@ -176,7 +176,7 @@ def _resolve_sig_or_inform(
         if on_unresolved_required_args == "warn":
             msg = (
                 f"{errmsg}. To suppress this warning and simply return the original "
-                'function, pass `on_unresolved_required_args="return"`.',
+                'function, pass `on_unresolved_required_args="return"`.'
             )
 
             warnings.warn(msg, UserWarning, stacklevel=2)
@@ -194,13 +194,13 @@ def _resolve_sig_or_inform(
             if on_unannotated_required_args == "raise":
                 msg = (
                     f'{base} To allow this, pass `on_unannotated_required_args="ignore"'
-                    '`. To emit a warning, pass "warn".',
+                    '`. To emit a warning, pass "warn".'
                 )
                 raise TypeError(msg)
             elif on_unannotated_required_args == "warn":
                 msg = (
                     f'{base} To allow this, pass `on_unannotated_required_args="ignore"'
-                    '`. To raise an exception, pass "raise".',
+                    '`. To raise an exception, pass "raise".'
                 )
                 warnings.warn(msg, UserWarning, stacklevel=2)
             elif on_unannotated_required_args == "return":
