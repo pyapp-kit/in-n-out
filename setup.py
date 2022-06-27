@@ -24,4 +24,7 @@ if not os.getenv("SKIP_CYTHON"):
             compiler_directives=compiler_directives,
         )
 
-setuptools.setup(ext_modules=ext_modules)
+setuptools.setup(
+    ext_modules=ext_modules,
+    package_dir={"": "src"},
+)
