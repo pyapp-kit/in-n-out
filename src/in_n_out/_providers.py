@@ -38,7 +38,8 @@ def provider(func: C) -> C:
     """
     return_hint = get_type_hints(func).get("return")
     if get_origin(return_hint) == Union:
-        if (args := get_args(return_hint)) and len(args) == 2 and type(None) in args:
+        args = get_args(return_hint)
+        if args and len(args) == 2 and type(None) in args:
             return_hint = next(a for a in args if a is not type(None))  # noqa
     if return_hint is not None:
         _PROVIDERS[return_hint] = func

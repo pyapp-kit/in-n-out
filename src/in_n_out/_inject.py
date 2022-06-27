@@ -98,15 +98,16 @@ def inject_dependencies(
     # get provider functions for each required parameter
     @wraps(func)
     def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
+        # sourcery skip: use-named-expression
         # we're actually calling the "injected function" now
 
         _sig = cast("Signature", sig)
         # first, get and call the provider functions for each parameter type:
-        _kwargs = {
-            param_name: provider()
-            for param_name, param in _sig.parameters.items()
-            if (provider := get_provider(param.annotation))
-        }
+        _kwargs = {}
+        for param in _sig.parameters.values():
+            provider = get_provider(param.annotation)
+            if provider:
+                _kwargs[param.name] = provider()
 
         # use bind_partial to allow the caller to still provide their own arguments
         # if desired. (i.e. the injected deps are only used if not provided)
@@ -122,8 +123,10 @@ def inject_dependencies(
                 f"After injecting dependencies for arguments {set(_kwargs)}, {e}"
             ) from e
 
-        if process_return and (processor := get_processor(_sig.return_annotation)):
-            processor(result)
+        if process_return:
+            processor = get_processor(_sig.return_annotation)
+            if processor:
+                processor(result)
 
         return result
 
