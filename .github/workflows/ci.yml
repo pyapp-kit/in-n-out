@@ -57,18 +57,12 @@ jobs:
 
   test-compiled:
     name: ${{ matrix.platform }} (${{ matrix.python-version }}-compiled)
-    runs-on: ${{ matrix.platform }}
+    runs-on: "ubuntu-latest"
 
     strategy:
       fail-fast: true
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
-        platform: ["ubuntu-latest"]
-        include:
-          - platform: "windows-latest"
-            python-version: "3.10"
-          - platform: "macos-latest"
-            python-version: "3.10"
 
     steps:
       - uses: actions/checkout@v3
@@ -87,6 +81,8 @@ jobs:
         run: |
           python setup.py build_ext --force --inplace --define CYTHON_TRACE
           python -c "import sys, in_n_out; print('compiled:', in_n_out._compiled); sys.exit(0 if in_n_out._compiled else 1)"
+          ls -alh
+          ls -alh src/in_n_out/
 
       - name: test
         run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-report=term-missing
@@ -95,6 +91,8 @@ jobs:
         run: |
           pip uninstall -y cython
           rm -rf src/in_n_out/*.so src/in_n_out/*.c src/in_n_out/__pycache__
+          ls -alh
+          ls -alh src/in_n_out/
 
       - name: test uncompiled
         run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-append
