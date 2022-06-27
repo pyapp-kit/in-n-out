@@ -1,4 +1,4 @@
-""" plugable dependency injection and result processing"""
+"""plugable dependency injection and result processing."""
 
 from importlib.metadata import PackageNotFoundError, version
 

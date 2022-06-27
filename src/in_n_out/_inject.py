@@ -169,31 +169,38 @@ def _resolve_sig_or_inform(
         errmsg = str(e)
         if on_unresolved_required_args == "raise":
             msg = (
-                f'{errmsg}. To simply return the original function, pass `on_unresolved_required_args="return"`. To emit a warning, pass "warn".',
+                f"{errmsg}. To simply return the original function, pass `on_un"
+                'resolved_required_args="return"`. To emit a warning, pass "warn".'
             )
             raise NameError(msg) from e
         if on_unresolved_required_args == "warn":
             msg = (
-                f'{errmsg}. To suppress this warning and simply return the original function, pass `on_unresolved_required_args="return"`.',
+                f"{errmsg}. To suppress this warning and simply return the original "
+                'function, pass `on_unresolved_required_args="return"`.',
             )
+
             warnings.warn(msg, UserWarning, stacklevel=2)
         return None
 
     for param in sig.parameters.values():
         if param.default is param.empty and param.annotation is param.empty:
             fname = (getattr(func, "__name__", ""),)
-            name = (param.name,)
+            name = param.name
             base = (
-                f"Injecting dependencies on function {fname!r} with a required, unannotated parameter {name!r}. This will fail later unless that parameter is provided at call-time.",
+                f"Injecting dependencies on function {fname!r} with a required, "
+                f"unannotated parameter {name!r}. This will fail later unless that "
+                "parameter is provided at call-time.",
             )
             if on_unannotated_required_args == "raise":
                 msg = (
-                    f'{base} To allow this, pass `on_unannotated_required_args="ignore"`. To emit a warning, pass "warn".',
+                    f'{base} To allow this, pass `on_unannotated_required_args="ignore"'
+                    '`. To emit a warning, pass "warn".',
                 )
                 raise TypeError(msg)
             elif on_unannotated_required_args == "warn":
                 msg = (
-                    f'{base} To allow this, pass `on_unannotated_required_args="ignore"`. To raise an exception, pass "raise".',
+                    f'{base} To allow this, pass `on_unannotated_required_args="ignore"'
+                    '`. To raise an exception, pass "raise".',
                 )
                 warnings.warn(msg, UserWarning, stacklevel=2)
             elif on_unannotated_required_args == "return":

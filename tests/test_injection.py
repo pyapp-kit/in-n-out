@@ -86,26 +86,26 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
         if on_unresolved == "raise":
             ctx = pytest.raises(
                 NameError,
-                match="Could not resolve type hint for required parameter 'v'",
+                match="Could not resolve type hint for required parameter",
             )
         else:
             expect_same_func_back = True
             if on_unresolved == "warn":
                 ctx = pytest.warns(
                     UserWarning,
-                    match="Could not resolve type hint for required parameter 'v'",
+                    match="Could not resolve type hint for required parameter",
                 )
 
     elif "unannotated" in in_func.__name__:  # required params without annotations
         if on_unannotated == "raise":
             ctx = pytest.raises(
                 TypeError,
-                match="Injecting dependencies on function 'unannotated' with a required, unannotated parameter 'x'",
+                match="Injecting dependencies .* with a required, unannotated param",
             )
         elif on_unannotated == "warn":
             ctx = pytest.warns(
                 UserWarning,
-                match="Injecting dependencies on function 'unannotated' with a required, unannotated parameter 'x'",
+                match="Injecting dependencies .* with a required, unannotated param",
             )
         elif on_unannotated == "return":
             expect_same_func_back = True
