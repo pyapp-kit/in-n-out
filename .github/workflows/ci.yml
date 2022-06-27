@@ -98,7 +98,7 @@ jobs:
         run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-append
 
       - name: Coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: true
           verbose: true
