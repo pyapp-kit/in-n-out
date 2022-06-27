@@ -1,6 +1,15 @@
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union, get_origin
-
-from typing_extensions import get_args, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    Type,
+    TypeVar,
+    Union,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 T = TypeVar("T")
 C = TypeVar("C", bound=Callable)
