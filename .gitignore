@@ -104,5 +104,4 @@ ENV/
 # IDE settings
 .vscode/
 
-in_n_out/_version.py
-src/in_n_out/_version.py
+src/**/*.c
