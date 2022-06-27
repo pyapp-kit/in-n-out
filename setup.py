@@ -5,6 +5,7 @@ import sys
 import setuptools
 
 if os.name == "nt":
+    from distutils.command import build_ext
 
     # fix LINK : error LNK2001: unresolved external symbol PyInit___init__
     # Patch from: https://bugs.python.org/issue35893
@@ -29,7 +30,7 @@ if os.name == "nt":
             ext.export_symbols.append(initfunc_name)
         return ext.export_symbols
 
-    build_ext.build_ext.get_export_symbols = get_export_symbols  # type: ignore  # noqa
+    build_ext.build_ext.get_export_symbols = get_export_symbols  # type: ignore
 
 
 ext_modules = None
