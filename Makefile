@@ -1,15 +1,18 @@
-.PHONY: build build-trace check clean
+.PHONY: build build-trace check clean cleanc
 
 build:
 	python setup.py build_ext --inplace
-	rm -f src/in_n_out/*.c
+	cleanc
 
 build-trace:
 	python setup.py build_ext --force --inplace --define CYTHON_TRACE
-	rm -f src/in_n_out/*.c
+	cleanc
 
 check:
 	pre-commit run --all-files
+
+cleanc:
+	rm -f src/in_n_out/*.c
 
 clean:
 	rm -rf `find . -name __pycache__`
