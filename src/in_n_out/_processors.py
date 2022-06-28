@@ -1,15 +1,5 @@
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-    get_args,
-    get_origin,
-    get_type_hints,
-)
+import warnings
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, get_type_hints
 
 T = TypeVar("T")
 C = TypeVar("C", bound=Callable)
@@ -23,17 +13,13 @@ def processor(func: C) -> C:
     """Decorator that declares `func` as a processor of its first parameter type."""
     hints = get_type_hints(func)
     hints.pop("return", None)
-    if not hints:  # pragma: no cover
-        raise TypeError(f"{func} has no argument type hints. Cannot be a processor.")
-    hint0 = list(hints.values())[0]
+    if not hints:
+        warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
+        return func
 
+    hint0 = list(hints.values())[0]
     if hint0 is not None:
-        if get_origin(hint0) == Union:
-            for arg in get_args(hint0):
-                if arg is not None:
-                    _PROCESSORS[arg] = func
-        else:
-            _PROCESSORS[hint0] = func
+        set_processors({hint0: func})
     return func
 
 

@@ -2,31 +2,20 @@ import warnings
 from typing import (
     Any,
     Callable,
-    ChainMap,
     Dict,
-    Mapping,
     Optional,
-    Tuple,
     Type,
     TypeVar,
     Union,
     cast,
-    get_args,
-    get_origin,
     get_type_hints,
     overload,
 )
 
+from . import _store
+
 T = TypeVar("T")
 C = TypeVar("C", bound=Callable[[], Any])
-_NULL = object()
-
-
-# registry of Type -> "provider function"
-# where each value is a function that is capable
-# of retrieving an instance of its corresponding key type.
-_PROVIDERS: Dict[Type, Callable[[], Any]] = {}
-_OPTIONAL_PROVIDERS: Dict[Type, Callable[[], Optional[Any]]] = {}
 
 
 def provider(func: C) -> C:
@@ -42,7 +31,9 @@ def provider(func: C) -> C:
     ...     return 42
     """
     return_hint = get_type_hints(func).get("return")
-    if return_hint is not None:
+    if return_hint is None:
+        warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
+    else:
         set_providers({return_hint: func})
     return func
 
@@ -76,27 +67,7 @@ def get_provider(
 def _get_provider(
     type_: Union[object, Type[T]], pop: bool = False
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
-    type_, is_optional = _check_optional(type_)
-
-    if pop:
-        # if we're popping `int`, we should also get rid of `Optional[int]`
-        opt_p = _OPTIONAL_PROVIDERS.pop(type_, None)
-        if is_optional:
-            # if we're popping `Optional[int]`, we should not get rid of `int`
-            return opt_p
-        return _PROVIDERS.pop(type_, None)
-
-    _map: Mapping[Type, Union[Callable[[], T], Callable[[], Optional[T]]]]
-    _map = ChainMap(_PROVIDERS, _OPTIONAL_PROVIDERS) if is_optional else _PROVIDERS
-
-    if type_ in _map:
-        return _map[type_]
-
-    if isinstance(type_, type):
-        for key, val in _map.items():
-            if issubclass(type_, key):
-                return val
-    return None
+    return _store._get(type_, True, pop)
 
 
 @overload
@@ -167,44 +138,17 @@ class set_providers:
         mapping: Dict[Type[T], Union[T, Callable[[], T]]],
         clobber: bool = False,
     ) -> None:
-        self._before: Dict[Tuple[Type, bool], Any] = {}
-        _non_optional: Dict[Type[T], Callable[[], T]] = {}
-        _optionals: Dict[Type[T], Callable[[], T]] = {}
-        for type_, provider in mapping.items():
-            if type_ in _PROVIDERS and not clobber:
-                raise ValueError(
-                    f"Type {type_} already has a provider and clobber is False"
-                )
-            # if provider is not a function, create a function that returns it
-            pcall = provider if callable(provider) else (lambda: cast(T, provider))
-            # check if this is an optional type
-            type_, optional = _check_optional(type_)
-            self._before[(type_, optional)] = _PROVIDERS.get(type_, _NULL)
-            if optional:
-                _optionals[type_] = pcall
-            else:
-                _non_optional[type_] = pcall
-
-        _PROVIDERS.update(_non_optional)
-        _OPTIONAL_PROVIDERS.update(_optionals)
+        self._before = _store._set(mapping, True, clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
+        from ._store import _STORE
+
         for (type_, optional), val in self._before.items():
-            MAP: dict = _OPTIONAL_PROVIDERS if optional else _PROVIDERS
-            if val is _NULL:
+            MAP: dict = _STORE.opt_providers if optional else _STORE.providers
+            if val is _STORE._NULL:
                 del MAP[type_]
             else:
                 MAP[type_] = cast(Callable, val)
-
-
-def _check_optional(type_: Any) -> Tuple[Type, bool]:
-    optional = False
-    if get_origin(type_) is Union:
-        args = get_args(type_)
-        if args and len(args) == 2 and type(None) in args:
-            type_ = next(a for a in args if a is not type(None))  # noqa
-            optional = True
-    return type_, optional
