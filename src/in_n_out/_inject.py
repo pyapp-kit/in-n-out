@@ -105,7 +105,7 @@ def inject_dependencies(
         # first, get and call the provider functions for each parameter type:
         _kwargs = {}
         for param in _sig.parameters.values():
-            provider = get_provider(param.annotation)
+            provider: Optional[Callable] = get_provider(param.annotation)
             if provider:
                 _kwargs[param.name] = provider()
 
