@@ -11,7 +11,7 @@ from typing import (
     overload,
 )
 
-from ._store import _STORE, Processor, T, _get, _set
+from ._store import _STORE, Processor, T
 
 
 def processor(func: Processor) -> Processor:
@@ -34,7 +34,7 @@ def get_processor(type_: Type[T]) -> Optional[Callable[[T], Any]]:
     process here leaves a lot of ambiguity, it mostly means the function "can
     do something" with a single input of the given type.
     """
-    return _get(type_, provider=False, pop=False)
+    return _STORE._get(type_, provider=False, pop=False)
 
 
 @overload
@@ -68,7 +68,7 @@ def clear_processor(
     Optional[Callable[[], T]]
         The provider function that was cleared, if any.
     """
-    result = _get(type_, provider=False, pop=True)
+    result = _STORE._get(type_, provider=False, pop=True)
 
     if result is None and warn_missing:
         warnings.warn(
@@ -104,7 +104,7 @@ class set_processors:
     def __init__(
         self, mapping: Mapping[Any, Callable[[T], Any]], clobber: bool = False
     ):
-        self._before = _set(mapping, provider=False, clobber=clobber)
+        self._before = _STORE._set(mapping, provider=False, clobber=clobber)
 
     def __enter__(self) -> None:
         return None

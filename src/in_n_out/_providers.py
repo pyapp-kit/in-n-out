@@ -11,7 +11,7 @@ from typing import (
     overload,
 )
 
-from ._store import _STORE, Provider, T, _get, _set
+from ._store import _STORE, Provider, T
 
 
 def provider(func: Provider) -> Provider:
@@ -63,7 +63,7 @@ def get_provider(
 def _get_provider(
     type_: Union[object, Type[T]], pop: bool = False
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
-    return _get(type_, provider=True, pop=pop)
+    return _STORE._get(type_, provider=True, pop=pop)
 
 
 @overload
@@ -134,7 +134,7 @@ class set_providers:
         mapping: Dict[Type[T], Union[T, Callable[[], T]]],
         clobber: bool = False,
     ) -> None:
-        self._before = _set(mapping, provider=True, clobber=clobber)
+        self._before = _STORE._set(mapping, provider=True, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
