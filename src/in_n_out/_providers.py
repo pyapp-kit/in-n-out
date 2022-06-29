@@ -15,55 +15,51 @@ from typing import (
 from ._store import Provider, Store, T
 
 
-@overload
-def provider(func: Provider, *, store: Union[str, Store, None] = None) -> Provider:
-    ...
+class set_providers:
+    """Set provider(s) for given type(s).
 
+    "Providers" are functions that can retrieve an instance of a given type.
 
-@overload
-def provider(
-    func: Literal[None] = ..., *, store: Union[str, Store, None] = None
-) -> Callable[[Provider], Provider]:
-    ...
-
-
-def provider(
-    func: Optional[Provider] = None, *, store: Union[str, Store, None] = None
-) -> Union[Callable[[Provider], Provider], Provider]:
-    """Decorate `func` as a provider of its first parameter type.
-
-    Note, If func returns `Optional[Type]`, it will be registered as a provider
-    for Type.
+    This is a class that behaves as a function or a context manager, that
+    allows one to set a provider function for a given type.
 
     Parameters
     ----------
-    func : Optional[Provider], optional
-        A function to decorate. If not provided, a decorator is returned.
+    mapping : Dict[Type[T], Callable[..., Optional[T]]]
+        a map of type -> provider function, where each value is a function
+        that is capable of retrieving an instance of the associated key/type.
+    clobber : bool, optional
+        Whether to override any existing provider function, by default False.
     store : Union[str, Store, None]
-        The Provider store to use, if not provided the global store is used.
+        The provider store to use, if not provided the global store is used.
 
-    Returns
-    -------
-    Union[Callable[[Provider], Provider], Provider]
-        If `func` is not provided, a decorator is returned, if `func` is provided
-        then the function is returned..
-
-    Examples
-    --------
-    >>> @provider
-    >>> def provide_int() -> int:
-    ...     return 42
+    Raises
+    ------
+    ValueError
+        if clobber is `False` and one of the keys in `mapping` is already
+        registered.
     """
 
-    def _inner(func: Provider) -> Provider:
-        return_hint = get_type_hints(func).get("return")
-        if return_hint is None:
-            warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
-        else:
-            set_providers({return_hint: func}, store=store)
-        return func
+    def __init__(
+        self,
+        mapping: Dict[Type[T], Union[T, Callable[[], T]]],
+        *,
+        clobber: bool = False,
+        store: Union[str, Store, None] = None,
+    ) -> None:
+        self._store = store if isinstance(store, Store) else Store.get_store(store)
+        self._before = self._store._set(mapping, provider=True, clobber=clobber)
 
-    return _inner(func) if func is not None else _inner
+    def __enter__(self) -> None:
+        return None
+
+    def __exit__(self, *_: Any) -> None:
+        for (type_, optional), val in self._before.items():
+            MAP: dict = self._store.opt_providers if optional else self._store.providers
+            if val is self._store._NULL:
+                del MAP[type_]
+            else:
+                MAP[type_] = cast(Callable, val)
 
 
 @overload
@@ -157,48 +153,55 @@ def clear_provider(
     return result
 
 
-class set_providers:
-    """Set provider(s) for given type(s).
+# Decorator
 
-    "Providers" are functions that can retrieve an instance of a given type.
 
-    This is a class that behaves as a function or a context manager, that
-    allows one to set a provider function for a given type.
+@overload
+def provider(func: Provider, *, store: Union[str, Store, None] = None) -> Provider:
+    ...
+
+
+@overload
+def provider(
+    func: Literal[None] = ..., *, store: Union[str, Store, None] = None
+) -> Callable[[Provider], Provider]:
+    ...
+
+
+def provider(
+    func: Optional[Provider] = None, *, store: Union[str, Store, None] = None
+) -> Union[Callable[[Provider], Provider], Provider]:
+    """Decorate `func` as a provider of its first parameter type.
+
+    Note, If func returns `Optional[Type]`, it will be registered as a provider
+    for Type.
 
     Parameters
     ----------
-    mapping : Dict[Type[T], Callable[..., Optional[T]]]
-        a map of type -> provider function, where each value is a function
-        that is capable of retrieving an instance of the associated key/type.
-    clobber : bool, optional
-        Whether to override any existing provider function, by default False.
+    func : Optional[Provider], optional
+        A function to decorate. If not provided, a decorator is returned.
     store : Union[str, Store, None]
-        The provider store to use, if not provided the global store is used.
+        The Provider store to use, if not provided the global store is used.
 
-    Raises
-    ------
-    ValueError
-        if clobber is `False` and one of the keys in `mapping` is already
-        registered.
+    Returns
+    -------
+    Union[Callable[[Provider], Provider], Provider]
+        If `func` is not provided, a decorator is returned, if `func` is provided
+        then the function is returned..
+
+    Examples
+    --------
+    >>> @provider
+    >>> def provide_int() -> int:
+    ...     return 42
     """
 
-    def __init__(
-        self,
-        mapping: Dict[Type[T], Union[T, Callable[[], T]]],
-        *,
-        clobber: bool = False,
-        store: Union[str, Store, None] = None,
-    ) -> None:
-        self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._before = self._store._set(mapping, provider=True, clobber=clobber)
+    def _inner(func: Provider) -> Provider:
+        return_hint = get_type_hints(func).get("return")
+        if return_hint is None:
+            warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
+        else:
+            set_providers({return_hint: func}, store=store)
+        return func
 
-    def __enter__(self) -> None:
-        return None
-
-    def __exit__(self, *_: Any) -> None:
-        for (type_, optional), val in self._before.items():
-            MAP: dict = self._store.opt_providers if optional else self._store.providers
-            if val is self._store._NULL:
-                del MAP[type_]
-            else:
-                MAP[type_] = cast(Callable, val)
+    return _inner(func) if func is not None else _inner

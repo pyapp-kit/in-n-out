@@ -15,55 +15,51 @@ from typing import (
 from ._store import Processor, Store, T
 
 
-@overload
-def processor(func: Processor, *, store: Union[str, Store, None] = None) -> Processor:
-    ...
+class set_processors:
+    """Set processor(s) for given type(s).
 
+    "Processors" are functions that can "do something" with an instance of the
+    type that they support.
 
-@overload
-def processor(
-    func: Literal[None] = ..., *, store: Union[str, Store, None] = None
-) -> Callable[[Processor], Processor]:
-    ...
-
-
-def processor(
-    func: Optional[Processor] = None, *, store: Union[str, Store, None] = None
-) -> Union[Callable[[Processor], Processor], Processor]:
-    """Decorate `func` as a processor of its first parameter type.
+    This is a class that behaves as a function or a context manager, that
+    allows one to set a processor function for a given type.
 
     Parameters
     ----------
-    func : Optional[Processor], optional
-        A function to decorate. If not provided, a decorator is returned.
+    mapping : Dict[Type[T], Callable[..., Optional[T]]]
+        a map of type -> processor function, where each value is a function
+        that is capable of retrieving an instance of the associated key/type.
+    clobber : bool, optional
+        Whether to override any existing processor function, by default False.
     store : Union[str, Store, None]
-        The processor store to use, if not provided the global store is used.
+        The provider store to use, if not provided the global store is used.
 
-    Returns
-    -------
-    Union[Callable[[Processor], Processor], Processor]
-        If `func` is not provided, a decorator is returned, if `func` is provided
-        then the function is returned.
-
-    Examples
-    --------
-    >>> @processor
-    >>> def process_int(x: int) -> None:
-    ...     print("Processing int:", x)
+    Raises
+    ------
+    ValueError
+        if clobber is `True` and one of the keys in `mapping` is already
+        registered.
     """
 
-    def _inner(func: Processor) -> Processor:
-        hints = get_type_hints(func)
-        hints.pop("return", None)
-        if not hints:
-            warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
-            return func
+    def __init__(
+        self,
+        mapping: Mapping[Any, Callable[[T], Any]],
+        *,
+        clobber: bool = False,
+        store: Union[str, Store, None] = None,
+    ):
+        self._store = store if isinstance(store, Store) else Store.get_store(store)
+        self._before = self._store._set(mapping, provider=False, clobber=clobber)
 
-        hint0 = list(hints.values())[0]
-        set_processors({hint0: func}, store=store)
-        return func
+    def __enter__(self) -> None:
+        return None
 
-    return _inner(func) if func is not None else _inner
+    def __exit__(self, *_: Any) -> None:
+        for (type_, _), val in self._before.items():
+            if val is self._store._NULL:
+                del self._store.processors[type_]
+            else:
+                self._store.processors[type_] = cast(Callable, val)
 
 
 def get_processor(
@@ -141,48 +137,55 @@ def clear_processor(
     return result
 
 
-class set_processors:
-    """Set processor(s) for given type(s).
+# Decorator
 
-    "Processors" are functions that can "do something" with an instance of the
-    type that they support.
 
-    This is a class that behaves as a function or a context manager, that
-    allows one to set a processor function for a given type.
+@overload
+def processor(func: Processor, *, store: Union[str, Store, None] = None) -> Processor:
+    ...
+
+
+@overload
+def processor(
+    func: Literal[None] = ..., *, store: Union[str, Store, None] = None
+) -> Callable[[Processor], Processor]:
+    ...
+
+
+def processor(
+    func: Optional[Processor] = None, *, store: Union[str, Store, None] = None
+) -> Union[Callable[[Processor], Processor], Processor]:
+    """Decorate `func` as a processor of its first parameter type.
 
     Parameters
     ----------
-    mapping : Dict[Type[T], Callable[..., Optional[T]]]
-        a map of type -> processor function, where each value is a function
-        that is capable of retrieving an instance of the associated key/type.
-    clobber : bool, optional
-        Whether to override any existing processor function, by default False.
+    func : Optional[Processor], optional
+        A function to decorate. If not provided, a decorator is returned.
     store : Union[str, Store, None]
-        The provider store to use, if not provided the global store is used.
+        The processor store to use, if not provided the global store is used.
 
-    Raises
-    ------
-    ValueError
-        if clobber is `True` and one of the keys in `mapping` is already
-        registered.
+    Returns
+    -------
+    Union[Callable[[Processor], Processor], Processor]
+        If `func` is not provided, a decorator is returned, if `func` is provided
+        then the function is returned.
+
+    Examples
+    --------
+    >>> @processor
+    >>> def process_int(x: int) -> None:
+    ...     print("Processing int:", x)
     """
 
-    def __init__(
-        self,
-        mapping: Mapping[Any, Callable[[T], Any]],
-        *,
-        clobber: bool = False,
-        store: Union[str, Store, None] = None,
-    ):
-        self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._before = self._store._set(mapping, provider=False, clobber=clobber)
+    def _inner(func: Processor) -> Processor:
+        hints = get_type_hints(func)
+        hints.pop("return", None)
+        if not hints:
+            warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
+            return func
 
-    def __enter__(self) -> None:
-        return None
+        hint0 = list(hints.values())[0]
+        set_processors({hint0: func}, store=store)
+        return func
 
-    def __exit__(self, *_: Any) -> None:
-        for (type_, _), val in self._before.items():
-            if val is self._store._NULL:
-                del self._store.processors[type_]
-            else:
-                self._store.processors[type_] = cast(Callable, val)
+    return _inner(func) if func is not None else _inner
