@@ -2,6 +2,7 @@ import warnings
 from typing import (
     Any,
     Callable,
+    Literal,
     Mapping,
     Optional,
     Type,
@@ -11,30 +12,88 @@ from typing import (
     overload,
 )
 
-from ._store import _STORE, Processor, T
+from ._store import Processor, Store, T
 
 
-def processor(func: Processor) -> Processor:
-    """Decorator that declares `func` as a processor of its first parameter type."""
-    hints = get_type_hints(func)
-    hints.pop("return", None)
-    if not hints:
-        warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
+@overload
+def processor(func: Processor, *, store: Union[str, Store, None] = None) -> Processor:
+    ...
+
+
+@overload
+def processor(
+    func: Literal[None] = ..., *, store: Union[str, Store, None] = None
+) -> Callable[[Processor], Processor]:
+    ...
+
+
+def processor(
+    func: Optional[Processor] = None, *, store: Union[str, Store, None] = None
+) -> Union[Callable[[Processor], Processor], Processor]:
+    """Decorate `func` as a processor of its first parameter type.
+
+    Parameters
+    ----------
+    func : Optional[Processor], optional
+        A function to decorate. If not provided, a decorator is returned.
+    store : Union[str, Store, None]
+        The processor store to use, if not provided the global store is used.
+
+    Returns
+    -------
+    Union[Callable[[Processor], Processor], Processor]
+        If `func` is not provided, a decorator is returned, if `func` is provided
+        then the function is returned.
+
+    Examples
+    --------
+    >>> @processor
+    >>> def process_int(x: int) -> None:
+    ...     print("Processing int:", x)
+    """
+
+    def _inner(func: Processor) -> Processor:
+        hints = get_type_hints(func)
+        hints.pop("return", None)
+        if not hints:
+            warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
+            return func
+
+        hint0 = list(hints.values())[0]
+        set_processors({hint0: func}, store=store)
         return func
 
-    hint0 = list(hints.values())[0]
-    set_processors({hint0: func})
-    return func
+    return _inner(func) if func is not None else _inner
 
 
-def get_processor(type_: Type[T]) -> Optional[Callable[[T], Any]]:
+def get_processor(
+    type_: Type[T],
+    store: Union[str, Store, None] = None,
+) -> Optional[Callable[[T], Any]]:
     """Return processor function for a given type.
 
     A processor is a function that can "process" a given return type.  The term
     process here leaves a lot of ambiguity, it mostly means the function "can
     do something" with a single input of the given type.
+
+    Parameters
+    ----------
+    type_ : Type[T]
+        Type for which to get the processor.
+    store : Union[str, Store, None]
+        The processor store to use, if not provided the global store is used.
+
+    Returns
+    -------
+    Optional[Callable[[T], Any]]
+        A processor function registered for `type_`, if any.
+
+    Examples
+    --------
+    >>> get_processor(int)
     """
-    return _STORE._get(type_, provider=False, pop=False)
+    store = store if isinstance(store, Store) else Store.get_store(store)
+    return store._get(type_, provider=False, pop=False)
 
 
 @overload
@@ -48,7 +107,9 @@ def clear_processor(type_: object) -> Union[Callable[[], Optional[T]], None]:
 
 
 def clear_processor(
-    type_: Union[object, Type[T]], warn_missing: bool = False
+    type_: Union[object, Type[T]],
+    warn_missing: bool = False,
+    store: Union[str, Store, None] = None,
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
     """Clear provider for a given type.
 
@@ -62,13 +123,16 @@ def clear_processor(
         The provider type to clear
     warn_missing : bool, optional
         Whether to emit a warning if there was not type registered, by default False
+    store : Union[str, Store, None]
+        The processor store to use, if not provided the global store is used.
 
     Returns
     -------
     Optional[Callable[[], T]]
         The provider function that was cleared, if any.
     """
-    result = _STORE._get(type_, provider=False, pop=True)
+    store = store if isinstance(store, Store) else Store.get_store(store)
+    result = store._get(type_, provider=False, pop=True)
 
     if result is None and warn_missing:
         warnings.warn(
@@ -93,6 +157,8 @@ class set_processors:
         that is capable of retrieving an instance of the associated key/type.
     clobber : bool, optional
         Whether to override any existing processor function, by default False.
+    store : Union[str, Store, None]
+        The provider store to use, if not provided the global store is used.
 
     Raises
     ------
@@ -102,18 +168,21 @@ class set_processors:
     """
 
     def __init__(
-        self, mapping: Mapping[Any, Callable[[T], Any]], clobber: bool = False
+        self,
+        mapping: Mapping[Any, Callable[[T], Any]],
+        *,
+        clobber: bool = False,
+        store: Union[str, Store, None] = None,
     ):
-        self._before = _STORE._set(mapping, provider=False, clobber=clobber)
+        self._store = store if isinstance(store, Store) else Store.get_store(store)
+        self._before = self._store._set(mapping, provider=False, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-
         for (type_, _), val in self._before.items():
-            MAP: dict = _STORE.processors
-            if val is _STORE._NULL:
-                del MAP[type_]
+            if val is self._store._NULL:
+                del self._store.processors[type_]
             else:
-                MAP[type_] = cast(Callable, val)
+                self._store.processors[type_] = cast(Callable, val)

@@ -17,15 +17,94 @@ from ._util import _check_optional
 T = TypeVar("T")
 Provider = TypeVar("Provider", bound=Callable[[], Any])
 Processor = TypeVar("Processor", bound=Callable[[Any], Any])
+_GLOBAL = "global"
 
 
-class _Store:
+class Store:
+    """A Store is a collection of providers and processors."""
+
     _NULL = object()
+    _instances: Dict[str, "Store"] = {}
 
-    def __init__(self) -> None:
+    @classmethod
+    def create(cls, name: str) -> "Store":
+        """Create a new Store instance with the given `name`.
+
+        This name can be used to refer to the Store in other functions.
+
+        Parameters
+        ----------
+        name : str
+            A name for the Store.
+
+        Returns
+        -------
+        Store
+            A Store instance with the given `name`.
+
+        Raises
+        ------
+        KeyError
+            If the name is already in use, or the name is 'global'.
+        """
+        name = name.lower()
+        if name == _GLOBAL:
+            raise KeyError("'global' is a reserved store name")
+        elif name in cls._instances:
+            raise KeyError(f"Store {name!r} already exists")
+        cls._instances[name] = cls(name)
+        return cls._instances[name]
+
+    @classmethod
+    def get_store(cls, name: Optional[str] = None) -> "Store":
+        """Get a Store instance with the given `name`.
+
+        Parameters
+        ----------
+        name : str
+            The name of the Store.
+
+        Returns
+        -------
+        Store
+            A Store instance with the given `name`.
+
+        Raises
+        ------
+        KeyError
+            If the name is not in use.
+        """
+        name = (name or _GLOBAL).lower()
+        if name not in cls._instances:
+            raise KeyError(f"Store {name!r} does not exist")
+        return cls._instances[name]
+
+    @classmethod
+    def destroy(cls, name: str) -> None:
+        """Destroy Store instance with the given `name`."""
+        name = name.lower()
+        if name == _GLOBAL:
+            raise ValueError("The global store cannot be destroyed")
+        elif name in cls._instances:
+            raise KeyError(f"Store {name!r} does not exist")
+        del cls._instances[name]
+
+    def __init__(self, name: str) -> None:
+        self._name = name
         self.providers: Dict[Type, Callable[[], Any]] = {}
         self.opt_providers: Dict[Type, Callable[[], Optional[Any]]] = {}
         self.processors: Dict[Any, Callable[[Any], Any]] = {}
+
+    @property
+    def name(self) -> str:
+        """Return the name of this Store."""
+        return self._name
+
+    def clear(self) -> None:
+        """Clear all providers and processors."""
+        self.providers.clear()
+        self.opt_providers.clear()
+        self.processors.clear()
 
     def _get(
         self, type_: Union[object, Type[T]], provider: bool, pop: bool
@@ -106,4 +185,4 @@ class _Store:
         return _before
 
 
-_STORE = _Store()
+Store._instances[_GLOBAL] = Store(_GLOBAL)

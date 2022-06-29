@@ -3,6 +3,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Literal,
     Optional,
     Type,
     Union,
@@ -11,27 +12,58 @@ from typing import (
     overload,
 )
 
-from ._store import _STORE, Provider, T
+from ._store import Provider, Store, T
 
 
-def provider(func: Provider) -> Provider:
-    """Decorator that declares `func` as a provider of its return type.
+@overload
+def provider(func: Provider, *, store: Union[str, Store, None] = None) -> Provider:
+    ...
+
+
+@overload
+def provider(
+    func: Literal[None] = ..., *, store: Union[str, Store, None] = None
+) -> Callable[[Provider], Provider]:
+    ...
+
+
+def provider(
+    func: Optional[Provider] = None, *, store: Union[str, Store, None] = None
+) -> Union[Callable[[Provider], Provider], Provider]:
+    """Decorate `func` as a provider of its first parameter type.
 
     Note, If func returns `Optional[Type]`, it will be registered as a provider
     for Type.
 
+    Parameters
+    ----------
+    func : Optional[Provider], optional
+        A function to decorate. If not provided, a decorator is returned.
+    store : Union[str, Store, None]
+        The Provider store to use, if not provided the global store is used.
+
+    Returns
+    -------
+    Union[Callable[[Provider], Provider], Provider]
+        If `func` is not provided, a decorator is returned, if `func` is provided
+        then the function is returned..
+
     Examples
     --------
     >>> @provider
-    >>> def provides_int() -> int:
+    >>> def provide_int() -> int:
     ...     return 42
     """
-    return_hint = get_type_hints(func).get("return")
-    if return_hint is None:
-        warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
-    else:
-        set_providers({return_hint: func})
-    return func
+
+    def _inner(func: Provider) -> Provider:
+        return_hint = get_type_hints(func).get("return")
+        if return_hint is None:
+            warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
+        else:
+            set_providers({return_hint: func}, store=store)
+        return func
+
+    return _inner(func) if func is not None else _inner
 
 
 @overload
@@ -46,24 +78,39 @@ def get_provider(type_: object) -> Union[Callable[[], Optional[T]], None]:
 
 
 def get_provider(
-    type_: Union[object, Type[T]]
+    type_: Union[object, Type[T]], store: Union[str, Store, None] = None
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
     """Return object provider function given a type.
 
     An object provider is a function that returns an instance of a
     particular object type.
 
-    This is a form of dependency injection, and, along with
-    `inject_dependencies`, allows us to inject objects into functions based on
-    type hints.
+    Parameters
+    ----------
+    type_ : Type[T] or Type Hint
+        Type for which to get the provider.
+    store : Union[str, Store, None]
+        The provider store to use, if not provided the global store is used.
+
+    Returns
+    -------
+    Optional[Callable[[T], Any]]
+        A provider function registered for `type_`, if any.
+
+    Examples
+    --------
+    >>> get_provider(int)
     """
-    return _get_provider(type_, pop=False)
+    return _get_provider(type_, pop=False, store=store)
 
 
 def _get_provider(
-    type_: Union[object, Type[T]], pop: bool = False
+    type_: Union[object, Type[T]],
+    pop: bool = False,
+    store: Union[str, Store, None] = None,
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
-    return _STORE._get(type_, provider=True, pop=pop)
+    store = store if isinstance(store, Store) else Store.get_store(store)
+    return store._get(type_, provider=True, pop=pop)
 
 
 @overload
@@ -77,7 +124,9 @@ def clear_provider(type_: object) -> Union[Callable[[], Optional[T]], None]:
 
 
 def clear_provider(
-    type_: Union[object, Type[T]], warn_missing: bool = False
+    type_: Union[object, Type[T]],
+    warn_missing: bool = False,
+    store: Union[str, Store, None] = None,
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
     """Clear provider for a given type.
 
@@ -91,13 +140,15 @@ def clear_provider(
         The provider type to clear
     warn_missing : bool, optional
         Whether to emit a warning if there was not type registered, by default False
+    store : Union[str, Store, None]
+        The provider store to use, if not provided the global store is used.
 
     Returns
     -------
     Optional[Callable[[], T]]
         The provider function that was cleared, if any.
     """
-    result = _get_provider(type_, pop=True)
+    result = _get_provider(type_, pop=True, store=store)
 
     if result is None and warn_missing:
         warnings.warn(
@@ -121,6 +172,8 @@ class set_providers:
         that is capable of retrieving an instance of the associated key/type.
     clobber : bool, optional
         Whether to override any existing provider function, by default False.
+    store : Union[str, Store, None]
+        The provider store to use, if not provided the global store is used.
 
     Raises
     ------
@@ -132,18 +185,20 @@ class set_providers:
     def __init__(
         self,
         mapping: Dict[Type[T], Union[T, Callable[[], T]]],
+        *,
         clobber: bool = False,
+        store: Union[str, Store, None] = None,
     ) -> None:
-        self._before = _STORE._set(mapping, provider=True, clobber=clobber)
+        self._store = store if isinstance(store, Store) else Store.get_store(store)
+        self._before = self._store._set(mapping, provider=True, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-
         for (type_, optional), val in self._before.items():
-            MAP: dict = _STORE.opt_providers if optional else _STORE.providers
-            if val is _STORE._NULL:
+            MAP: dict = self._store.opt_providers if optional else self._store.providers
+            if val is self._store._NULL:
                 del MAP[type_]
             else:
                 MAP[type_] = cast(Callable, val)
