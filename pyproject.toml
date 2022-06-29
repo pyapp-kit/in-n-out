@@ -145,6 +145,7 @@ ignore = [
     "**/*.c",
     "tox.ini",
     "Makefile",
+    "codecov.yml",
 ]
 
 # https://python-semantic-release.readthedocs.io/en/latest/configuration.html
