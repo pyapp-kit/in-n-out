@@ -2,9 +2,9 @@ from typing import Optional, Sequence
 
 import pytest
 
-from in_n_out import get_processor, processor, set_processors
+from in_n_out import Store, get_processor, processor, set_processors
 from in_n_out._processors import clear_processor
-from in_n_out._store import _STORE
+from in_n_out._store import _GLOBAL
 
 
 @pytest.mark.parametrize(
@@ -90,7 +90,7 @@ def test_optional_processors():
     assert clear_processor(str) is processes_string
 
     # all clear
-    assert not _STORE.processors
+    assert not Store.get_store(_GLOBAL).processors
 
 
 def test_unlikely_processor():

@@ -2,9 +2,9 @@ from typing import Optional, Sequence
 
 import pytest
 
-from in_n_out import get_provider, provider, set_providers
+from in_n_out import Store, get_provider, provider, set_providers
 from in_n_out._providers import clear_provider
-from in_n_out._store import _STORE
+from in_n_out._store import _GLOBAL
 
 
 @pytest.mark.parametrize(
@@ -97,8 +97,8 @@ def test_optional_providers():
     assert clear_provider(str) is provides_str
 
     # all clear
-    assert not _STORE.opt_providers
-    assert not _STORE.providers
+    assert not Store.get_store(_GLOBAL).opt_providers
+    assert not Store.get_store(_GLOBAL).providers
 
 
 def test_unlikely_provider():
