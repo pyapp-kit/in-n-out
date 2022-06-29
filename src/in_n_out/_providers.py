@@ -199,7 +199,7 @@ def provider(
     def _inner(func: Provider) -> Provider:
         return_hint = get_type_hints(func).get("return")
         if return_hint is None:
-            warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
+            warnings.warn(f"{func} has no return type hint. Cannot be a provider.")
         else:
             set_providers({return_hint: func}, store=store)
         return func

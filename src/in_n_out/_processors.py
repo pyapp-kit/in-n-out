@@ -32,7 +32,7 @@ class set_processors:
     clobber : bool, optional
         Whether to override any existing processor function, by default False.
     store : Union[str, Store, None]
-        The provider store to use, if not provided the global store is used.
+        The processor store to use, if not provided the global store is used.
 
     Raises
     ------
@@ -107,16 +107,16 @@ def clear_processor(
     warn_missing: bool = False,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
-    """Clear provider for a given type.
+    """Clear processor for a given type.
 
     Note: this does NOT yet clear sub/superclasses of type_. So if there is a registered
-    provider for Sequence, and you call clear_processor(list), the Sequence provider
-    will still be registered, and vice versa.
+    processor for `Sequence`, and you call `clear_processor(list)`, the `Sequence`
+    processor will still be registered, and vice versa.
 
     Parameters
     ----------
     type_ : Type[T]
-        The provider type to clear
+        The processor type to clear
     warn_missing : bool, optional
         Whether to emit a warning if there was not type registered, by default False
     store : Union[str, Store, None]
@@ -125,7 +125,7 @@ def clear_processor(
     Returns
     -------
     Optional[Callable[[], T]]
-        The provider function that was cleared, if any.
+        The processor function that was cleared, if any.
     """
     store = store if isinstance(store, Store) else Store.get_store(store)
     result = store._get(type_, provider=False, pop=True)
