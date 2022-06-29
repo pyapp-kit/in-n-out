@@ -5,20 +5,16 @@ from typing import (
     Dict,
     Optional,
     Type,
-    TypeVar,
     Union,
     cast,
     get_type_hints,
     overload,
 )
 
-from . import _store
-
-T = TypeVar("T")
-C = TypeVar("C", bound=Callable[[], Any])
+from ._store import _STORE, Provider, T, _get, _set
 
 
-def provider(func: C) -> C:
+def provider(func: Provider) -> Provider:
     """Decorator that declares `func` as a provider of its return type.
 
     Note, If func returns `Optional[Type]`, it will be registered as a provider
@@ -32,7 +28,7 @@ def provider(func: C) -> C:
     """
     return_hint = get_type_hints(func).get("return")
     if return_hint is None:
-        warnings.warn(f"{func} has no argument type hints. Cannot be a processor.")
+        warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
     else:
         set_providers({return_hint: func})
     return func
@@ -67,7 +63,7 @@ def get_provider(
 def _get_provider(
     type_: Union[object, Type[T]], pop: bool = False
 ) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
-    return _store._get(type_, True, pop)
+    return _get(type_, provider=True, pop=pop)
 
 
 @overload
@@ -138,13 +134,12 @@ class set_providers:
         mapping: Dict[Type[T], Union[T, Callable[[], T]]],
         clobber: bool = False,
     ) -> None:
-        self._before = _store._set(mapping, True, clobber)
+        self._before = _set(mapping, provider=True, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-        from ._store import _STORE
 
         for (type_, optional), val in self._before.items():
             MAP: dict = _STORE.opt_providers if optional else _STORE.providers

@@ -1,15 +1,20 @@
 import warnings
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, get_type_hints
+from typing import (
+    Any,
+    Callable,
+    Mapping,
+    Optional,
+    Type,
+    Union,
+    cast,
+    get_type_hints,
+    overload,
+)
 
-T = TypeVar("T")
-C = TypeVar("C", bound=Callable)
-_NULL = object()
-
-# add default processors
-_PROCESSORS: Dict[Any, Callable[[Any], Any]] = {}
+from ._store import _STORE, Processor, T, _get, _set
 
 
-def processor(func: C) -> C:
+def processor(func: Processor) -> Processor:
     """Decorator that declares `func` as a processor of its first parameter type."""
     hints = get_type_hints(func)
     hints.pop("return", None)
@@ -18,8 +23,7 @@ def processor(func: C) -> C:
         return func
 
     hint0 = list(hints.values())[0]
-    if hint0 is not None:
-        set_processors({hint0: func})
+    set_processors({hint0: func})
     return func
 
 
@@ -30,14 +34,47 @@ def get_processor(type_: Type[T]) -> Optional[Callable[[T], Any]]:
     process here leaves a lot of ambiguity, it mostly means the function "can
     do something" with a single input of the given type.
     """
-    if type_ in _PROCESSORS:
-        return _PROCESSORS[type_]
+    return _get(type_, provider=False, pop=False)
 
-    if isinstance(type_, type):
-        for key, val in _PROCESSORS.items():
-            if isinstance(key, type) and issubclass(type_, key):
-                return val
-    return None
+
+@overload
+def clear_processor(type_: Type[T]) -> Union[Callable[[], T], None]:
+    ...
+
+
+@overload
+def clear_processor(type_: object) -> Union[Callable[[], Optional[T]], None]:
+    ...
+
+
+def clear_processor(
+    type_: Union[object, Type[T]], warn_missing: bool = False
+) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
+    """Clear provider for a given type.
+
+    Note: this does NOT yet clear sub/superclasses of type_. So if there is a registered
+    provider for Sequence, and you call clear_processor(list), the Sequence provider
+    will still be registered, and vice versa.
+
+    Parameters
+    ----------
+    type_ : Type[T]
+        The provider type to clear
+    warn_missing : bool, optional
+        Whether to emit a warning if there was not type registered, by default False
+
+    Returns
+    -------
+    Optional[Callable[[], T]]
+        The provider function that was cleared, if any.
+    """
+    result = _get(type_, provider=False, pop=True)
+
+    if result is None and warn_missing:
+        warnings.warn(
+            f"No processor was registered for {type_}, and warn_missing is True."
+        )
+    return result
 
 
 class set_processors:
@@ -65,23 +102,18 @@ class set_processors:
     """
 
     def __init__(
-        self, mapping: Dict[Type[T], Callable[..., Optional[T]]], clobber: bool = False
+        self, mapping: Mapping[Any, Callable[[T], Any]], clobber: bool = False
     ):
-        self._before = {}
-        for k in mapping:
-            if k in _PROCESSORS and not clobber:
-                raise ValueError(
-                    f"Class {k} already has a processor and clobber is False"
-                )
-            self._before[k] = _PROCESSORS.get(k, _NULL)
-        _PROCESSORS.update(mapping)
+        self._before = _set(mapping, provider=False, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-        for key, val in self._before.items():
-            if val is _NULL:
-                del _PROCESSORS[key]
+
+        for (type_, _), val in self._before.items():
+            MAP: dict = _STORE.processors
+            if val is _STORE._NULL:
+                del MAP[type_]
             else:
-                _PROCESSORS[key] = val  # type: ignore[assignment]
+                MAP[type_] = cast(Callable, val)

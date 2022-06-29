@@ -15,7 +15,8 @@ from typing import (
 from ._util import _check_optional
 
 T = TypeVar("T")
-C = TypeVar("C", bound=Callable[[], Any])
+Provider = TypeVar("Provider", bound=Callable[[], Any])
+Processor = TypeVar("Processor", bound=Callable[[Any], Any])
 
 
 class _STORE:
@@ -62,7 +63,7 @@ def _get(
 
 
 def _set(
-    mapping: Dict[Type[T], Union[T, Callable]], provider: bool, clobber: bool
+    mapping: Mapping[Type[T], Union[T, Callable]], provider: bool, clobber: bool
 ) -> dict:
     map_type = "provider" if provider else "processor"
     _before: Dict[Tuple[Type, bool], Any] = {}
@@ -89,9 +90,9 @@ def _set(
         _before[(origin, Toptional)] = _map.get(origin, _STORE._NULL)
 
         if Toptional and provider:
-            _optionals[origin] = caller
+            _optionals[origin] = cast(Callable, caller)
         else:
-            _non_optional[origin] = caller
+            _non_optional[origin] = cast(Callable, caller)
 
     if provider:
         _STORE.providers.update(_non_optional)
