@@ -27,7 +27,6 @@ class _Store:
         self.opt_providers: Dict[Type, Callable[[], Optional[Any]]] = {}
         self.processors: Dict[Any, Callable[[Any], Any]] = {}
 
-
     def _get(
         self, type_: Union[object, Type[T]], provider: bool, pop: bool
     ) -> Optional[Callable]:
@@ -63,9 +62,11 @@ class _Store:
                     return val
         return None
 
-
     def _set(
-        self,mapping: Mapping[Type[T], Union[T, Callable]], provider: bool, clobber: bool
+        self,
+        mapping: Mapping[Type[T], Union[T, Callable]],
+        provider: bool,
+        clobber: bool,
     ) -> dict:
         map_type = "provider" if provider else "processor"
         _before: Dict[Tuple[Type, bool], Any] = {}
@@ -103,5 +104,6 @@ class _Store:
             self.processors.update(_non_optional)
 
         return _before
+
 
 _STORE = _Store()
