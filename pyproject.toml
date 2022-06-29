@@ -116,6 +116,10 @@ disallow_subclassing_any = false
 show_error_codes = true
 pretty = true
 
+[[tool.mypy.overrides]]
+modules = ['tests.*']
+disallow_untyped_defs = false
+
 
 # https://coverage.readthedocs.io/en/6.4/config.html
 [tool.coverage.report]
@@ -140,7 +144,8 @@ ignore = [
     "tests/**/*",
     "**/*.c",
     "tox.ini",
-    "Makefile"
+    "Makefile",
+    "codecov.yml",
 ]
 
 # https://python-semantic-release.readthedocs.io/en/latest/configuration.html

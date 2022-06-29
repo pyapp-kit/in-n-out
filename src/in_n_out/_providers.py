@@ -1,30 +1,20 @@
+import warnings
 from typing import (
     Any,
     Callable,
     Dict,
     Optional,
     Type,
-    TypeVar,
     Union,
     cast,
-    get_args,
-    get_origin,
     get_type_hints,
+    overload,
 )
 
-T = TypeVar("T")
-C = TypeVar("C", bound=Callable)
-_NULL = object()
+from ._store import _STORE, Provider, T
 
 
-# registry of Type -> "provider function"
-# where each value is a function that is capable
-# of retrieving an instance of its corresponding key type.
-_PROVIDERS: Dict[Type, Callable[..., Optional[object]]] = {}
-Provider = Callable[..., Optional[T]]
-
-
-def provider(func: C) -> C:
+def provider(func: Provider) -> Provider:
     """Decorator that declares `func` as a provider of its return type.
 
     Note, If func returns `Optional[Type]`, it will be registered as a provider
@@ -37,16 +27,27 @@ def provider(func: C) -> C:
     ...     return 42
     """
     return_hint = get_type_hints(func).get("return")
-    if get_origin(return_hint) == Union:
-        args = get_args(return_hint)
-        if args and len(args) == 2 and type(None) in args:
-            return_hint = next(a for a in args if a is not type(None))  # noqa
-    if return_hint is not None:
-        _PROVIDERS[return_hint] = func
+    if return_hint is None:
+        warnings.warn(f"{func} has no return type hint. Cannot be a processor.")
+    else:
+        set_providers({return_hint: func})
     return func
 
 
-def get_provider(type_: Union[Any, Type[T]]) -> Optional[Provider]:
+@overload
+def get_provider(type_: Type[T]) -> Union[Callable[[], T], None]:
+    ...
+
+
+@overload
+def get_provider(type_: object) -> Union[Callable[[], Optional[T]], None]:
+    # `object` captures passing get_provider(Optional[type])
+    ...
+
+
+def get_provider(
+    type_: Union[object, Type[T]]
+) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
     """Return object provider function given a type.
 
     An object provider is a function that returns an instance of a
@@ -56,14 +57,53 @@ def get_provider(type_: Union[Any, Type[T]]) -> Optional[Provider]:
     `inject_dependencies`, allows us to inject objects into functions based on
     type hints.
     """
-    if type_ in _PROVIDERS:
-        return cast(Provider, _PROVIDERS[type_])
+    return _get_provider(type_, pop=False)
 
-    if isinstance(type_, type):
-        for key, val in _PROVIDERS.items():
-            if issubclass(type_, key):
-                return cast(Provider, val)
-    return None
+
+def _get_provider(
+    type_: Union[object, Type[T]], pop: bool = False
+) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
+    return _STORE._get(type_, provider=True, pop=pop)
+
+
+@overload
+def clear_provider(type_: Type[T]) -> Union[Callable[[], T], None]:
+    ...
+
+
+@overload
+def clear_provider(type_: object) -> Union[Callable[[], Optional[T]], None]:
+    ...
+
+
+def clear_provider(
+    type_: Union[object, Type[T]], warn_missing: bool = False
+) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
+    """Clear provider for a given type.
+
+    Note: this does NOT yet clear sub/superclasses of type_. So if there is a registered
+    provider for Sequence, and you call clear_provider(list), the Sequence provider
+    will still be registered, and vice versa.
+
+    Parameters
+    ----------
+    type_ : Type[T]
+        The provider type to clear
+    warn_missing : bool, optional
+        Whether to emit a warning if there was not type registered, by default False
+
+    Returns
+    -------
+    Optional[Callable[[], T]]
+        The provider function that was cleared, if any.
+    """
+    result = _get_provider(type_, pop=True)
+
+    if result is None and warn_missing:
+        warnings.warn(
+            f"No provider was registered for {type_}, and warn_missing is True."
+        )
+    return result
 
 
 class set_providers:
@@ -90,23 +130,20 @@ class set_providers:
     """
 
     def __init__(
-        self, mapping: Dict[Type[T], Callable[..., Optional[T]]], clobber: bool = False
+        self,
+        mapping: Dict[Type[T], Union[T, Callable[[], T]]],
+        clobber: bool = False,
     ) -> None:
-        self._before = {}
-        for k in mapping:
-            if k in _PROVIDERS and not clobber:
-                raise ValueError(
-                    f"Class {k} already has a provider and clobber is False"
-                )
-            self._before[k] = _PROVIDERS.get(k, _NULL)
-        _PROVIDERS.update(mapping)
+        self._before = _STORE._set(mapping, provider=True, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-        for key, val in self._before.items():
-            if val is _NULL:
-                del _PROVIDERS[key]
+
+        for (type_, optional), val in self._before.items():
+            MAP: dict = _STORE.opt_providers if optional else _STORE.providers
+            if val is _STORE._NULL:
+                del MAP[type_]
             else:
-                _PROVIDERS[key] = val  # type: ignore
+                MAP[type_] = cast(Callable, val)
