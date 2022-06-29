@@ -85,7 +85,7 @@ class Store:
         name = name.lower()
         if name == _GLOBAL:
             raise ValueError("The global store cannot be destroyed")
-        elif name in cls._instances:
+        elif name not in cls._instances:
             raise KeyError(f"Store {name!r} does not exist")
         del cls._instances[name]
 
