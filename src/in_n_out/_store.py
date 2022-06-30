@@ -1,3 +1,4 @@
+import contextlib
 from collections import ChainMap
 from inspect import CO_VARARGS
 from types import CodeType
@@ -6,6 +7,7 @@ from typing import (
     Callable,
     Dict,
     Generic,
+    Iterator,
     Mapping,
     Optional,
     Tuple,
@@ -147,8 +149,9 @@ class Store(Generic[T]):
 
         if isinstance(type_, type):
             for key, val in self.processors.items():
-                if issubclass(type_, key):
-                    return val
+                with contextlib.suppress(TypeError):
+                    if issubclass(type_, key):
+                        return val
         return None
 
     def _pop_provider(
@@ -191,21 +194,35 @@ class Store(Generic[T]):
         _before: Dict[Type[T], Union[_NullSentinel, Callable[[T], Any]]] = {}
         _validated: Dict[Type[T], Callable[[T], Any]] = {}
 
-        for type_, obj in mapping.items():
-            origin, _ = _check_optional(type_)
+        for type_, processor in mapping.items():
+            valid_processor = _validate_processor(processor)
 
-            if origin in self.processors and not clobber:
-                raise ValueError(
-                    f"Type {type_} already has a processor and 'clobber' is False"
-                )
+            for origin, before in self._iter_before(type_, clobber):
 
-            # get current value
-            _before[origin] = self.processors.get(origin, self._NULL)
-            _validated[origin] = _validate_processor(obj)
+                # get current value
+                _before[origin] = before
+                _validated[origin] = valid_processor
 
         self.processors.update(_validated)
 
         return _before
+
+    def _iter_before(
+        self, type_: Union[Type[T], object], clobber: bool
+    ) -> Iterator[Tuple[Type[T], Union[_NullSentinel, Callable[[T], Any]]]]:
+        origin, _ = _check_optional(type_)
+
+        if getattr(origin, "__origin__", None) is Union:
+            for arg in getattr(origin, "__args__", []):
+                yield from self._iter_before(arg, clobber)
+        else:
+            if origin in self.processors and not clobber:
+                raise ValueError(
+                    f"Type {type_} already has a processor and 'clobber' is False"
+                )
+            # get current value
+            currently = self.processors.get(origin, self._NULL)
+            yield origin, currently
 
     def _set_provider(
         self,
