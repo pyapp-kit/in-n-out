@@ -1,4 +1,4 @@
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 import pytest
 
@@ -6,20 +6,24 @@ from in_n_out import Store, get_processor, processor, set_processors
 from in_n_out._processors import clear_processor
 from in_n_out._store import _GLOBAL
 
+R = object()
+
 
 @pytest.mark.parametrize(
-    "type, process, ask_type, expect",
+    "type, process, ask_type",
     [
-        (int, lambda x: 1, int, 1),  # processor can be a function
+        (int, lambda x: R, int),  # processor can be a function
         # we can ask for a subclass of a provided types
-        (Sequence, lambda x: [], list, []),
+        (Sequence, lambda x: R, list),
+        (Union[list, tuple], lambda x: R, tuple),
+        (Union[list, tuple], lambda x: R, list),
     ],
 )
-def test_set_processors(type, process, ask_type, expect):
+def test_set_processors(type, process, ask_type):
     """Test that we can set processor as function or constant, and get it back."""
     assert not get_processor(ask_type)
     with set_processors({type: process}):
-        assert get_processor(ask_type)(1) == expect
+        assert get_processor(ask_type)(1) == R
     assert not get_processor(ask_type)  # make sure context manager cleaned up
 
 
@@ -91,6 +95,15 @@ def test_optional_processors():
 
     # all clear
     assert not Store.get_store(_GLOBAL).processors
+
+
+def test_union_processors():
+    @processor
+    def processes_int_or_str(x: Union[int, str]):
+        return 1
+
+    assert get_processor(int) is processes_int_or_str
+    assert get_processor(str) is processes_int_or_str
 
 
 def test_unlikely_processor():
