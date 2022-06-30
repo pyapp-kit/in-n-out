@@ -148,6 +148,7 @@ def inject_dependencies(
             # bound = sig.bind_partial(*args, **kwargs)  # type: ignore
             # bound.apply_defaults()
             # _kwargs.update(**bound.arguments)
+            _kwargs.update(dict(zip(names, args)))  # type: ignore
 
             try:  # call the function with injected values
                 result = func(**_kwargs)
