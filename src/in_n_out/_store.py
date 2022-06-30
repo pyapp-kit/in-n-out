@@ -122,8 +122,8 @@ class Store:
         return dict(self._namespace)
 
     @namespace.setter
-    def namespace(self, namespace: Union[Namespace, Callable[[], Namespace]]):
-        self._namespace = namespace
+    def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]):
+        self._namespace = ns
 
     def _get(
         self, type_: Union[object, Type[T]], provider: bool, pop: bool
