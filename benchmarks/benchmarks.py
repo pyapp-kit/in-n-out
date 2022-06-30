@@ -14,7 +14,7 @@ class ConnectSuite:
     def setup(self):
         self.reg_func = some_func
         self.injected_func = ino.inject_dependencies(some_func)
-        ino.set_processors({int: lambda: 1, str: lambda: "hi"})
+        ino.set_providers({int: lambda: 1, str: lambda: "hi"})
 
     def time_to_inject(self):
         ino.inject_dependencies(some_func)
