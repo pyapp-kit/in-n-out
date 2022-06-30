@@ -51,9 +51,10 @@ def resolve_type_hints(
     _localns = dict(_typing_names())
     if localns:
         _localns.update(localns)  # explicitly provided locals take precedence
-    return typing.get_type_hints(
-        obj, globalns=globalns, localns=_localns, include_extras=include_extras
-    )
+    kwargs: Dict[str, Any] = dict(globalns=globalns, localns=_localns)
+    if PY39_OR_GREATER:
+        kwargs["include_extras"] = include_extras
+    return typing.get_type_hints(obj, **kwargs)
 
 
 def resolve_single_type_hints(
@@ -80,13 +81,9 @@ def resolve_single_type_hints(
     >>> resolve_single_type_hints('hi', localns={'hi': typing.Any})
     (typing.Any,)
     """
-    kwargs: Dict[str, Any] = dict(localns=localns)
-    if PY39_OR_GREATER:
-        kwargs["include_extras"] = include_extras
-
     annotations = {str(n): v for n, v in enumerate(objs)}
     mock_obj = type("_T", (), {"__annotations__": annotations})()
-    hints = resolve_type_hints(mock_obj, **kwargs)
+    hints = resolve_type_hints(mock_obj, localns=localns, include_extras=include_extras)
     return tuple(hints[k] for k in annotations)
 
 
