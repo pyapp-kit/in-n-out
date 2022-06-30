@@ -43,27 +43,27 @@ class set_processors:
 
     def __init__(
         self,
-        mapping: Mapping[Any, Callable[[T], Any]],
+        mapping: Mapping[Union[Type[T], object], Callable[[T], Any]],
         *,
         clobber: bool = False,
         store: Union[str, Store, None] = None,
     ):
         self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._before = self._store._set(mapping, provider=False, clobber=clobber)
+        self._before = self._store._set_processor(mapping, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-        for (type_, _), val in self._before.items():
+        for origin, val in self._before.items():
             if val is self._store._NULL:
-                del self._store.processors[type_]
+                del self._store.processors[origin]
             else:
-                self._store.processors[type_] = cast(Callable, val)
+                self._store.processors[origin] = cast(Callable, val)
 
 
 def get_processor(
-    type_: Type[T],
+    type_: Union[Type[T], object],
     store: Union[str, Store, None] = None,
 ) -> Optional[Callable[[T], Any]]:
     """Return processor function for a given type.
@@ -89,32 +89,14 @@ def get_processor(
     >>> get_processor(int)
     """
     store = store if isinstance(store, Store) else Store.get_store(store)
-    return store._get(type_, provider=False, pop=False)
-
-
-@overload
-def clear_processor(
-    type_: Type[T],
-    warn_missing: bool = False,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[], T], None]:
-    ...
-
-
-@overload
-def clear_processor(
-    type_: object,
-    warn_missing: bool = False,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[], Optional[T]], None]:
-    ...
+    return store._get_processor(type_)
 
 
 def clear_processor(
     type_: Union[object, Type[T]],
     warn_missing: bool = False,
     store: Union[str, Store, None] = None,
-) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
+) -> Optional[Callable[[T], Any]]:
     """Clear processor for a given type.
 
     Note: this does NOT yet clear sub/superclasses of type_. So if there is a registered
@@ -136,7 +118,7 @@ def clear_processor(
         The processor function that was cleared, if any.
     """
     store = store if isinstance(store, Store) else Store.get_store(store)
-    result = store._get(type_, provider=False, pop=True)
+    result = store._pop_processor(type_)
 
     if result is None and warn_missing:
         warnings.warn(

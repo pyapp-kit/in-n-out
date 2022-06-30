@@ -29,7 +29,7 @@ def test_set_providers_cleanup():
 
     with set_providers({int: 1}):
         assert get_provider(int)() == 1
-        with pytest.raises(ValueError, match="already has a provider and clobber is"):
+        with pytest.raises(ValueError, match="already has a provider and 'clobber' is"):
             set_providers({int: 2})
         with set_providers({int: 2}, clobber=True):
             assert get_provider(int)() == 2
