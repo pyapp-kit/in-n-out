@@ -106,7 +106,6 @@ ignore = "D100,D213,D401,D413,D107"
 minversion = "6.0"
 testpaths = ["tests"]
 filterwarnings = ["error"]
-addopts = ["--cov"]
 
 [tool.coverage.run]
 source = ['src/in_n_out']
