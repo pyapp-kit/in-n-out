@@ -10,16 +10,16 @@ from in_n_out._store import _GLOBAL
 @pytest.mark.parametrize(
     "type, provide, ask_type, expect",
     [
-        (int, lambda: 1, int, 1),  # processor can be a function
-        (int, 1, int, 1),  # or a constant value
-        (Sequence, [], list, []),  # we can ask for a subclass of a provided types
+        (int, lambda x: 1, int, 1),  # processor can be a function
+        # we can ask for a subclass of a provided types
+        (Sequence, lambda x: [], list, []),
     ],
 )
 def test_set_processors(type, provide, ask_type, expect):
     """Test that we can set processor as function or constant, and get it back."""
     assert not get_processor(ask_type)
     with set_processors({type: provide}):
-        assert get_processor(ask_type)() == expect
+        assert get_processor(ask_type)(1) == expect
     assert not get_processor(ask_type)  # make sure context manager cleaned up
 
 
@@ -27,13 +27,13 @@ def test_set_processors_cleanup():
     """Test that we can set processors in contexts, and cleanup"""
     assert not get_processor(int)
 
-    with set_processors({int: 1}):
-        assert get_processor(int)() == 1
-        with pytest.raises(ValueError, match="already has a processor and clobber is"):
-            set_processors({int: 2})
-        with set_processors({int: 2}, clobber=True):
-            assert get_processor(int)() == 2
-        assert get_processor(int)() == 1
+    with set_processors({int: lambda x: x}):
+        assert get_processor(int)(2) == 2
+        with pytest.raises(ValueError, match="has a processor and 'clobber' is"):
+            set_processors({int: lambda x: x * x})
+        with set_processors({int: lambda x: x * x}, clobber=True):
+            assert get_processor(int)(2) == 4
+        assert get_processor(int)(2) == 2
 
     assert not get_processor(int)
 
@@ -99,3 +99,9 @@ def test_unlikely_processor():
         @processor
         def provides_int():
             ...
+
+    with pytest.raises(ValueError, match="Processors must take at least one argument"):
+        set_processors({int: lambda: 1})
+
+    with pytest.raises(ValueError, match="Processors must be callable"):
+        set_processors({int: 1})

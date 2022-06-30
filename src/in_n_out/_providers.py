@@ -42,13 +42,13 @@ class set_providers:
 
     def __init__(
         self,
-        mapping: Dict[Type[T], Union[T, Callable[[], T]]],
+        mapping: Dict[Union[Type[T], object], Union[T, Callable[[], T]]],
         *,
         clobber: bool = False,
         store: Union[str, Store, None] = None,
     ) -> None:
         self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._before = self._store._set(mapping, provider=True, clobber=clobber)
+        self._before = self._store._set_provider(mapping, clobber=clobber)
 
     def __enter__(self) -> None:
         return None

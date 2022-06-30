@@ -46,7 +46,7 @@ def inject_dependencies(
 
 
 def inject_dependencies(
-    func: Callable[P, R] = None,
+    func: Optional[Callable[P, R]] = None,
     *,
     localns: Optional[dict] = None,
     store: Union[str, Store, None] = None,
@@ -151,7 +151,7 @@ def inject_dependencies(
             _kwargs.update(**bound.arguments)
 
             try:  # call the function with injected values
-                result = func(**_kwargs)  # type: ignore [arg-type]
+                result = func(**_kwargs)
             except TypeError as e:
                 # likely a required argument is still missing.
                 raise TypeError(

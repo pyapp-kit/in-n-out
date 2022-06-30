@@ -34,8 +34,14 @@ def test_set_processor():
     def f2(x: int) -> int:
         return x
 
+    # calling mock inside process_int to preserve the __code__ object
+    # on the processor function
     mock = Mock()
-    with set_processors({int: mock}):
+
+    def process_int(x: int) -> None:
+        mock(x)
+
+    with set_processors({int: process_int}):
         assert f2(3) == 3
     mock.assert_called_once_with(3)
 

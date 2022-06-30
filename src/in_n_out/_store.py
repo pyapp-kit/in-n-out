@@ -1,4 +1,6 @@
 from collections import ChainMap
+from inspect import CO_VARARGS
+from types import CodeType
 from typing import (
     Any,
     Callable,
@@ -22,10 +24,14 @@ _GLOBAL = "global"
 Namespace = Mapping[str, object]
 
 
+class _NullSentinel:
+    ...
+
+
 class Store:
     """A Store is a collection of providers and processors."""
 
-    _NULL = object()
+    _NULL = _NullSentinel()
     _instances: Dict[str, "Store"] = {}
 
     @classmethod
@@ -122,7 +128,7 @@ class Store:
         return dict(self._namespace)
 
     @namespace.setter
-    def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]):
+    def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]) -> None:
         self._namespace = ns
 
     def _get(
@@ -160,14 +166,36 @@ class Store:
                     return val
         return None
 
-    def _set(
+    def _set_processor(
         self,
-        mapping: Mapping[Type[T], Union[T, Callable]],
-        provider: bool,
+        mapping: Mapping[Union[Type[T], object], Callable[[T], Any]],
         clobber: bool,
-    ) -> dict:
-        map_type = "provider" if provider else "processor"
-        _before: Dict[Tuple[Type, bool], Any] = {}
+    ) -> Dict[Type[T], Union[_NullSentinel, Callable[[T], Any]]]:
+        _before: Dict[Type[T], Union[_NullSentinel, Callable[[T], Any]]] = {}
+        _validated: Dict[Type[T], Callable[[T], Any]] = {}
+
+        for type_, obj in mapping.items():
+            origin, _ = _check_optional(type_)
+
+            if origin in self.processors and not clobber:
+                raise ValueError(
+                    f"Type {type_} already has a processor and 'clobber' is False"
+                )
+
+            # get current value
+            _before[origin] = self.processors.get(origin, self._NULL)
+            _validated[origin] = _validate_processor(obj)
+
+        self.processors.update(_validated)
+
+        return _before
+
+    def _set_provider(
+        self,
+        mapping: Mapping[Union[Type[T], object], Union[T, Callable]],
+        clobber: bool,
+    ) -> Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]]:
+        _before: Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]] = {}
         _non_optional = {}
         _optionals = {}
 
@@ -175,33 +203,57 @@ class Store:
             origin, Toptional = _check_optional(type_)
 
             _map: Dict[Any, Callable]
-            if provider:
-                _map = self.opt_providers if Toptional else self.providers
-            else:
-                _map = self.processors
-
+            _map = self.opt_providers if Toptional else self.providers
             if origin in _map and not clobber:
                 raise ValueError(
-                    f"Type {type_} already has a {map_type} and clobber is False"
+                    f"Type {type_} already has a provider and 'clobber' is False"
                 )
             # if provider is not a function, create a function that returns it
-            caller = obj if callable(obj) else (lambda: cast(T, obj))
+            caller: Callable = _validate_provider(obj)
 
             # get current value
             _before[(origin, Toptional)] = _map.get(origin, self._NULL)
 
-            if Toptional and provider:
-                _optionals[origin] = cast(Callable, caller)
+            if Toptional:
+                _optionals[origin] = caller
             else:
-                _non_optional[origin] = cast(Callable, caller)
+                _non_optional[origin] = caller
 
-        if provider:
-            self.providers.update(_non_optional)
-            self.opt_providers.update(_optionals)
-        else:
-            self.processors.update(_non_optional)
+        self.providers.update(_non_optional)
+        self.opt_providers.update(_optionals)
 
         return _before
 
 
 Store._instances[_GLOBAL] = Store(_GLOBAL)
+
+
+def _validate_provider(obj: Union[T, Callable[[], T]]) -> Callable[[], T]:
+    """Check that an object is a valid provider.
+
+    Can either be a function or an object. If a non-callable is passed, a function
+    that returns it is created.
+    """
+    return obj if callable(obj) else (lambda: cast(T, obj))
+
+
+def _validate_processor(obj: Callable[[T], Any]) -> Callable[[T], Any]:
+    """Validate a processor.
+
+    Processors must be a callable that accepts at least one argument(excluding
+    keyword-only arguments).
+    """
+    if not callable(obj):
+        raise ValueError(f"Processors must be callable. Got {obj!r}")
+    co: Optional[CodeType] = getattr(obj, "__code__", None)
+    if not co:
+        # if we don't have a code object, we can't check the number of arguments
+        # TODO: see if we can do better in the future, but better to just return
+        # the callable for now.
+        return obj
+    if co.co_argcount < 1 and not (co.co_flags & CO_VARARGS):
+        name = getattr(obj, "__name__", None) or obj
+        raise ValueError(
+            f"Processors must take at least one argument. {name!r} takes none."
+        )
+    return obj

@@ -43,23 +43,23 @@ class set_processors:
 
     def __init__(
         self,
-        mapping: Mapping[Any, Callable[[T], Any]],
+        mapping: Mapping[Union[Type[T], object], Callable[[T], Any]],
         *,
         clobber: bool = False,
         store: Union[str, Store, None] = None,
     ):
         self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._before = self._store._set(mapping, provider=False, clobber=clobber)
+        self._before = self._store._set_processor(mapping, clobber=clobber)
 
     def __enter__(self) -> None:
         return None
 
     def __exit__(self, *_: Any) -> None:
-        for (type_, _), val in self._before.items():
+        for origin, val in self._before.items():
             if val is self._store._NULL:
-                del self._store.processors[type_]
+                del self._store.processors[origin]
             else:
-                self._store.processors[type_] = cast(Callable, val)
+                self._store.processors[origin] = cast(Callable, val)
 
 
 def get_processor(
