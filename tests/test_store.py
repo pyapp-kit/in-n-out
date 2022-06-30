@@ -2,7 +2,7 @@ from typing import Optional
 
 import pytest
 
-from in_n_out import Store, set_processors, set_providers
+from in_n_out import Store, inject_dependencies, provider, set_processors, set_providers
 from in_n_out._store import _GLOBAL
 
 
@@ -37,9 +37,8 @@ def test_create_get_destroy():
     assert len(Store._instances) == 1
 
 
-def test_store_clear():
+def test_store_clear(test_store: Store):
 
-    test_store = Store.create("test")
     assert not test_store.providers
     assert not test_store.opt_providers
     assert not test_store.processors
@@ -55,3 +54,30 @@ def test_store_clear():
     assert not test_store.providers
     assert not test_store.opt_providers
     assert not test_store.processors
+
+
+def test_store_namespace(test_store: Store):
+    class T:
+        ...
+
+    @provider(store=test_store)
+    def provide_t() -> T:
+        return T()
+
+    # namespace can be a static dict
+    test_store.namespace = {"Hint": T}
+
+    @inject_dependencies(store=test_store)
+    def use_t(t: "Hint") -> None:  # type: ignore  # noqa: F821
+        return t
+
+    assert isinstance(use_t(), T)
+
+    # namespace can also be a callable
+    test_store.namespace = lambda: {"Hint2": T}
+
+    @inject_dependencies(store="test")
+    def use_t2(t: "Hint2") -> None:  # type: ignore  # noqa: F821
+        return t
+
+    assert isinstance(use_t2(), T)
