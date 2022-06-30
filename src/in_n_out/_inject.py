@@ -137,11 +137,15 @@ def inject_dependencies(
             # first, get and call the provider functions for each parameter type:
             _kwargs = {}
             for param in _sig.parameters.values():
-                provider: Optional[Callable] = get_provider(
-                    param.annotation, store=store
-                )
-                if provider:
-                    _kwargs[param.name] = provider()
+                # provider: Optional[Callable] = _store._get_provider(param.annotation)
+                # if provider:
+                #     _kwargs[param.name] = provider()
+                # provider: Optional[Callable] = _store._get_provider(param.annotation)
+                
+                provided = _store._get_provided(param.annotation)
+                if provided is not None:
+                    _kwargs[param.name] = provided
+
 
             # use bind_partial to allow the caller to still provide their own arguments
             # if desired. (i.e. the injected deps are only used if not provided)

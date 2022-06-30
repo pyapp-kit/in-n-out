@@ -147,3 +147,20 @@ def test_processors_not_passed_none():
         mock.assert_not_called()
         assert f(10) == 10
         mock.assert_called_once_with(10)
+
+
+def test_optional_provider_with_required_arg(test_store):
+    mock = Mock()
+
+    @inject_dependencies(store=test_store)
+    def f(x: int):
+        mock(x)
+
+    with set_providers({Optional[int]: lambda: None}, store=test_store):
+        with pytest.raises(TypeError, match="missing 1 required positional argument"):
+            f()
+        mock.assert_not_called()
+
+    with set_providers({Optional[int]: lambda: 2}, store=test_store):
+        f()
+        mock.assert_called_once_with(2)

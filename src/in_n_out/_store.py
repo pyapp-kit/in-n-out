@@ -9,6 +9,7 @@ from typing import (
     Generic,
     Iterator,
     Mapping,
+    NamedTuple,
     Optional,
     Tuple,
     Type,
@@ -182,9 +183,34 @@ class Store(Generic[T]):
 
         if isinstance(type_, type):
             for key, val in _map.items():
-                if issubclass(type_, key):
-                    return val
+                with contextlib.suppress(TypeError):
+                    if issubclass(type_, key):
+                        return val
         return None
+
+    def _iter_providers(self, type_: Union[object, Type[T]]) -> Optional[Callable[[], T]]:
+        type_, is_optional = _check_optional(type_)
+
+        # when retrieving a provider, we differentiate between optional and non-optional
+        # when trying to retrieve a processor, we don't, because we won't pass a value
+        # of `None` to a processor
+        _opt: Dict[Any, Callable] = self.opt_providers
+        _non_opt: Dict[Any, Callable] = self.providers
+        _map: Mapping[Type, Callable]
+        _map = ChainMap(_non_opt, _opt) if is_optional else _non_opt
+
+        if type_ in _map:
+            return _map[type_]
+
+        if isinstance(type_, type):
+            for key, val in _map.items():
+                with contextlib.suppress(TypeError):
+                    if issubclass(type_, key):
+                        return val
+        return None
+
+    def _get_provided(self, type_: Union[object, Type[T]]) -> T:
+        ...
 
     def _set_processor(
         self,
@@ -233,6 +259,7 @@ class Store(Generic[T]):
         _before: Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]] = {}
         _non_optional = {}
         _optionals = {}
+
 
         for type_, obj in mapping.items():
             origin, type_optional = _check_optional(type_)
