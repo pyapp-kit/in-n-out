@@ -125,7 +125,7 @@ def inject_dependencies(
         )
         if sig is None:  # something went wrong, and the user was notified.
             return func
-        process_return = sig.return_annotation is not sig.empty
+        process_result = sig.return_annotation is not sig.empty
 
         # get provider functions for each required parameter
         @wraps(func)
@@ -157,7 +157,7 @@ def inject_dependencies(
                     f"After injecting dependencies for arguments {set(_kwargs)}, {e}"
                 ) from e
 
-            if process_return:
+            if result is not None and process_result:
                 processor = _store._get_processor(_sig.return_annotation)
                 if processor:
                     processor(result)

@@ -1,5 +1,5 @@
 from contextlib import nullcontext
-from typing import ContextManager
+from typing import ContextManager, Optional
 from unittest.mock import Mock
 
 import pytest
@@ -127,3 +127,23 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
             assert out_func is in_func
         else:
             assert out_func is not in_func
+
+
+def test_processors_not_passed_none():
+    @inject_dependencies
+    def f(x: int) -> Optional[int]:
+        return x if x > 5 else None
+
+    mock = Mock()
+
+    # regardless of whether a process accepts "Optional" or not,
+    # we won't call it unless the value is not None
+    # i.e. this could also be `(x: Optional[int])` and it would only be called with int
+    def process_int(x: int) -> None:
+        mock(x)
+
+    with set_processors({int: process_int}):
+        assert f(3) is None
+        mock.assert_not_called()
+        assert f(10) == 10
+        mock.assert_called_once_with(10)
