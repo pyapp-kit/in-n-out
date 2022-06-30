@@ -1,11 +1,12 @@
+# from __future__ import annotations
+
 from __future__ import annotations
 
 import warnings
 from functools import wraps
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, Union, cast, overload
+from typing import TYPE_CHECKING, Union, overload
 
-from ._providers import get_provider
 from ._store import Store
 from ._type_resolution import type_resolved_signature
 
@@ -126,6 +127,8 @@ def inject_dependencies(
         if sig is None:  # something went wrong, and the user was notified.
             return func
         process_result = sig.return_annotation is not sig.empty
+        params = [(p.name, p.annotation) for p in sig.parameters.values()]
+        return_anno = sig.return_annotation
 
         # get provider functions for each required parameter
         @wraps(func)
@@ -133,19 +136,16 @@ def inject_dependencies(
             # sourcery skip: use-named-expression
             # we're actually calling the "injected function" now
 
-            _sig = cast("Signature", sig)
             # first, get and call the provider functions for each parameter type:
             _kwargs = {}
-            for param in _sig.parameters.values():
-                provider: Optional[Callable] = get_provider(
-                    param.annotation, store=store
-                )
+            for name, annotation in params:
+                provider: Optional[Callable] = _store._get_provider(annotation)
                 if provider:
-                    _kwargs[param.name] = provider()
+                    _kwargs[name] = provider()
 
             # use bind_partial to allow the caller to still provide their own arguments
             # if desired. (i.e. the injected deps are only used if not provided)
-            bound = _sig.bind_partial(*args, **kwargs)
+            bound = sig.bind_partial(*args, **kwargs)  # type: ignore
             bound.apply_defaults()
             _kwargs.update(**bound.arguments)
 
@@ -158,7 +158,7 @@ def inject_dependencies(
                 ) from e
 
             if result is not None and process_result:
-                processor = _store._get_processor(_sig.return_annotation)
+                processor = _store._get_processor(return_anno)
                 if processor:
                     processor(result)
 
