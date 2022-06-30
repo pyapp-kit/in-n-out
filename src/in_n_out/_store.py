@@ -19,6 +19,8 @@ Provider = TypeVar("Provider", bound=Callable[[], Any])
 Processor = TypeVar("Processor", bound=Callable[[Any], Any])
 _GLOBAL = "global"
 
+Namespace = Mapping[str, object]
+
 
 class Store:
     """A Store is a collection of providers and processors."""
@@ -94,6 +96,7 @@ class Store:
         self.providers: Dict[Type, Callable[[], Any]] = {}
         self.opt_providers: Dict[Type, Callable[[], Optional[Any]]] = {}
         self.processors: Dict[Any, Callable[[Any], Any]] = {}
+        self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
 
     @property
     def name(self) -> str:
@@ -105,6 +108,22 @@ class Store:
         self.providers.clear()
         self.opt_providers.clear()
         self.processors.clear()
+
+    @property
+    def namespace(self) -> dict[str, object]:
+        """Return namespace for type resolution, if this store has one.
+
+        If no namespace is set, this will return an empty `dict`.
+        """
+        if self._namespace is None:
+            return {}
+        if callable(self._namespace):
+            return dict(self._namespace())
+        return dict(self._namespace)
+
+    @namespace.setter
+    def namespace(self, namespace: Union[Namespace, Callable[[], Namespace]]):
+        self._namespace = namespace
 
     def _get(
         self, type_: Union[object, Type[T]], provider: bool, pop: bool

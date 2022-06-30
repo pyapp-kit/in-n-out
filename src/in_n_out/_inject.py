@@ -3,10 +3,11 @@ from __future__ import annotations
 import warnings
 from functools import wraps
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast
 
 from ._processors import get_processor
 from ._providers import get_provider
+from ._store import Store
 from ._type_resolution import type_resolved_signature
 
 if TYPE_CHECKING:
@@ -24,6 +25,7 @@ def inject_dependencies(
     func: Callable[P, R],
     *,
     localns: Optional[dict] = None,
+    store: Union[str, Store, None] = None,
     on_unresolved_required_args: RaiseWarnReturnIgnore = "raise",
     on_unannotated_required_args: RaiseWarnReturnIgnore = "warn",
 ) -> Callable[P, R]:
@@ -46,6 +48,9 @@ def inject_dependencies(
         a function with type hints
     localns : Optional[dict]
         Optional local namespace for name resolution, by default None
+    store : Union[str, Store, None]
+        Optional store to use when retrieving providers and processors,
+        by default the global store will be used.
     on_unresolved_required_args : RaiseWarnReturnIgnore
         What to do when a required parameter (one without a default) is encountered
         with an unresolvable type annotation.
@@ -80,6 +85,8 @@ def inject_dependencies(
     ):
         return func
 
+    store = store if isinstance(store, Store) else Store.get_store(store)
+
     # get a signature object with all type annotations resolved
     # this may result in a NameError if a required argument is unresolveable.
     # There may also be unannotated required arguments, which will likely fail
@@ -87,9 +94,9 @@ def inject_dependencies(
     # function to handle notifying the user on these cases.
     sig = _resolve_sig_or_inform(
         func,
-        localns,
-        on_unresolved_required_args,
-        on_unannotated_required_args,
+        localns={**store.namespace, **(localns or {})},
+        on_unresolved_required_args=on_unresolved_required_args,
+        on_unannotated_required_args=on_unannotated_required_args,
     )
     if sig is None:  # something went wrong, and the user was notified.
         return func
@@ -105,7 +112,7 @@ def inject_dependencies(
         # first, get and call the provider functions for each parameter type:
         _kwargs = {}
         for param in _sig.parameters.values():
-            provider: Optional[Callable] = get_provider(param.annotation)
+            provider: Optional[Callable] = get_provider(param.annotation, store=store)
             if provider:
                 _kwargs[param.name] = provider()
 
@@ -124,7 +131,7 @@ def inject_dependencies(
             ) from e
 
         if process_return:
-            processor = get_processor(_sig.return_annotation)
+            processor = get_processor(_sig.return_annotation, store=store)
             if processor:
                 processor(result)
 
