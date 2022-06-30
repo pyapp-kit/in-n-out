@@ -8,17 +8,17 @@ from in_n_out._store import _GLOBAL
 
 
 @pytest.mark.parametrize(
-    "type, provide, ask_type, expect",
+    "type, process, ask_type, expect",
     [
         (int, lambda x: 1, int, 1),  # processor can be a function
         # we can ask for a subclass of a provided types
         (Sequence, lambda x: [], list, []),
     ],
 )
-def test_set_processors(type, provide, ask_type, expect):
+def test_set_processors(type, process, ask_type, expect):
     """Test that we can set processor as function or constant, and get it back."""
     assert not get_processor(ask_type)
-    with set_processors({type: provide}):
+    with set_processors({type: process}):
         assert get_processor(ask_type)(1) == expect
     assert not get_processor(ask_type)  # make sure context manager cleaned up
 
@@ -56,7 +56,7 @@ def test_processor_decorator():
 
 
 def test_optional_processors():
-    """Test providing & getting Optional[type]."""
+    """Test processing Optional[type]."""
     assert not get_processor(Optional[int])
     assert not get_processor(str)
 

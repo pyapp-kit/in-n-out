@@ -63,7 +63,7 @@ class set_processors:
 
 
 def get_processor(
-    type_: Type[T],
+    type_: Union[Type[T], object],
     store: Union[str, Store, None] = None,
 ) -> Optional[Callable[[T], Any]]:
     """Return processor function for a given type.
@@ -89,32 +89,14 @@ def get_processor(
     >>> get_processor(int)
     """
     store = store if isinstance(store, Store) else Store.get_store(store)
-    return store._get(type_, provider=False, pop=False)
-
-
-@overload
-def clear_processor(
-    type_: Type[T],
-    warn_missing: bool = False,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[], T], None]:
-    ...
-
-
-@overload
-def clear_processor(
-    type_: object,
-    warn_missing: bool = False,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[], Optional[T]], None]:
-    ...
+    return store._get_processor(type_)
 
 
 def clear_processor(
     type_: Union[object, Type[T]],
     warn_missing: bool = False,
     store: Union[str, Store, None] = None,
-) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
+) -> Optional[Callable[[T], Any]]:
     """Clear processor for a given type.
 
     Note: this does NOT yet clear sub/superclasses of type_. So if there is a registered
@@ -136,7 +118,7 @@ def clear_processor(
         The processor function that was cleared, if any.
     """
     store = store if isinstance(store, Store) else Store.get_store(store)
-    result = store._get(type_, provider=False, pop=True)
+    result = store._pop_processor(type_)
 
     if result is None and warn_missing:
         warnings.warn(

@@ -5,7 +5,6 @@ from functools import wraps
 from inspect import isgeneratorfunction
 from typing import TYPE_CHECKING, Union, cast, overload
 
-from ._processors import get_processor
 from ._providers import get_provider
 from ._store import Store
 from ._type_resolution import type_resolved_signature
@@ -159,7 +158,7 @@ def inject_dependencies(
                 ) from e
 
             if process_return:
-                processor = get_processor(_sig.return_annotation, store=store)
+                processor = _store._get_processor(_sig.return_annotation)
                 if processor:
                     processor(result)
 

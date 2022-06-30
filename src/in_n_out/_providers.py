@@ -101,16 +101,8 @@ def get_provider(
     --------
     >>> get_provider(int)
     """
-    return _get_provider(type_, pop=False, store=store)
-
-
-def _get_provider(
-    type_: Union[object, Type[T]],
-    pop: bool = False,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[], T], Callable[[], Optional[T]], None]:
     store = store if isinstance(store, Store) else Store.get_store(store)
-    return store._get(type_, provider=True, pop=pop)
+    return store._get_provider(type_)
 
 
 @overload
@@ -156,7 +148,8 @@ def clear_provider(
     Optional[Callable[[], T]]
         The provider function that was cleared, if any.
     """
-    result = _get_provider(type_, pop=True, store=store)
+    store = store if isinstance(store, Store) else Store.get_store(store)
+    result = store._pop_provider(type_)
 
     if result is None and warn_missing:
         warnings.warn(

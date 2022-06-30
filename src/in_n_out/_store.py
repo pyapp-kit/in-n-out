@@ -5,6 +5,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generic,
     Mapping,
     Optional,
     Tuple,
@@ -28,7 +29,7 @@ class _NullSentinel:
     ...
 
 
-class Store:
+class Store(Generic[T]):
     """A Store is a collection of providers and processors."""
 
     _NULL = _NullSentinel()
@@ -99,9 +100,9 @@ class Store:
 
     def __init__(self, name: str) -> None:
         self._name = name
-        self.providers: Dict[Type, Callable[[], Any]] = {}
-        self.opt_providers: Dict[Type, Callable[[], Optional[Any]]] = {}
-        self.processors: Dict[Any, Callable[[Any], Any]] = {}
+        self.providers: Dict[Type[T], Callable[[], T]] = {}
+        self.opt_providers: Dict[Type[T], Callable[[], Optional[T]]] = {}
+        self.processors: Dict[Type[T], Callable[[T], Any]] = {}
         self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
 
     @property
@@ -131,31 +132,47 @@ class Store:
     def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]) -> None:
         self._namespace = ns
 
-    def _get(
-        self, type_: Union[object, Type[T]], provider: bool, pop: bool
-    ) -> Optional[Callable]:
+    def _pop_processor(
+        self, type_: Union[object, Type[T]]
+    ) -> Optional[Callable[[T], Any]]:
+        type_, _ = _check_optional(type_)
+        return self.processors.pop(type_, None)
+
+    def _get_processor(
+        self, type_: Union[object, Type[T]]
+    ) -> Optional[Callable[[T], Any]]:
+        type_, _ = _check_optional(type_)
+        if type_ in self.processors:
+            return self.processors[type_]
+
+        if isinstance(type_, type):
+            for key, val in self.processors.items():
+                if issubclass(type_, key):
+                    return val
+        return None
+
+    def _pop_provider(
+        self, type_: Union[object, Type[T]]
+    ) -> Optional[Callable[[], Optional[T]]]:
+        type_, is_optional = _check_optional(type_)
+
+        # if we're popping `int`, we should also get rid of `Optional[int]`
+        opt_p = self.opt_providers.pop(type_, None)
+        if is_optional:
+            # if we're popping `Optional[int]`, we should not get rid of `int`
+            return opt_p
+        return self.providers.pop(type_, None) or opt_p
+
+    def _get_provider(self, type_: Union[object, Type[T]]) -> Optional[Callable[[], T]]:
         type_, is_optional = _check_optional(type_)
 
         # when retrieving a provider, we differentiate between optional and non-optional
         # when trying to retrieve a processor, we don't, because we won't pass a value
         # of `None` to a processor
-        if provider:
-            _opt: Dict[Any, Callable] = self.opt_providers
-            _non_opt: Dict[Any, Callable] = self.providers
-            _map: Mapping[Type, Callable]
-            _map = ChainMap(_non_opt, _opt) if is_optional else _non_opt
-        else:
-            _opt = self.processors
-            _non_opt = self.processors
-            _map = self.processors
-
-        if pop:
-            # if we're popping `int`, we should also get rid of `Optional[int]`
-            opt_p = _opt.pop(type_, None)
-            if is_optional:
-                # if we're popping `Optional[int]`, we should not get rid of `int`
-                return opt_p
-            return _non_opt.pop(type_, None) or opt_p
+        _opt: Dict[Any, Callable] = self.opt_providers
+        _non_opt: Dict[Any, Callable] = self.providers
+        _map: Mapping[Type, Callable]
+        _map = ChainMap(_non_opt, _opt) if is_optional else _non_opt
 
         if type_ in _map:
             return _map[type_]
@@ -195,15 +212,18 @@ class Store:
         mapping: Mapping[Union[Type[T], object], Union[T, Callable]],
         clobber: bool,
     ) -> Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]]:
+
         _before: Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]] = {}
         _non_optional = {}
         _optionals = {}
 
         for type_, obj in mapping.items():
-            origin, Toptional = _check_optional(type_)
+            origin, type_optional = _check_optional(type_)
 
-            _map: Dict[Any, Callable]
-            _map = self.opt_providers if Toptional else self.providers
+            if type_optional:  # sourcery skip: assign-if-exp
+                _map: Dict[Type[T], Callable] = self.opt_providers
+            else:
+                _map = self.providers
             if origin in _map and not clobber:
                 raise ValueError(
                     f"Type {type_} already has a provider and 'clobber' is False"
@@ -212,9 +232,9 @@ class Store:
             caller: Callable = _validate_provider(obj)
 
             # get current value
-            _before[(origin, Toptional)] = _map.get(origin, self._NULL)
+            _before[(origin, type_optional)] = _map.get(origin, self._NULL)
 
-            if Toptional:
+            if type_optional:
                 _optionals[origin] = caller
             else:
                 _non_optional[origin] = caller
