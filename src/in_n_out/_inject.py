@@ -5,7 +5,6 @@ from functools import wraps
 from inspect import isgeneratorfunction
 from typing import TYPE_CHECKING, Union, cast, overload
 
-from ._processors import get_processor
 from ._providers import get_provider
 from ._store import Store
 from ._type_resolution import type_resolved_signature
@@ -46,7 +45,7 @@ def inject_dependencies(
 
 
 def inject_dependencies(
-    func: Callable[P, R] = None,
+    func: Optional[Callable[P, R]] = None,
     *,
     localns: Optional[dict] = None,
     store: Union[str, Store, None] = None,
@@ -126,7 +125,7 @@ def inject_dependencies(
         )
         if sig is None:  # something went wrong, and the user was notified.
             return func
-        process_return = sig.return_annotation is not sig.empty
+        process_result = sig.return_annotation is not sig.empty
 
         # get provider functions for each required parameter
         @wraps(func)
@@ -151,15 +150,15 @@ def inject_dependencies(
             _kwargs.update(**bound.arguments)
 
             try:  # call the function with injected values
-                result = func(**_kwargs)  # type: ignore [arg-type]
+                result = func(**_kwargs)
             except TypeError as e:
                 # likely a required argument is still missing.
                 raise TypeError(
                     f"After injecting dependencies for arguments {set(_kwargs)}, {e}"
                 ) from e
 
-            if process_return:
-                processor = get_processor(_sig.return_annotation, store=store)
+            if result is not None and process_result:
+                processor = _store._get_processor(_sig.return_annotation)
                 if processor:
                     processor(result)
 
