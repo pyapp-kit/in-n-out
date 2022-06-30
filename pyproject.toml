@@ -106,6 +106,22 @@ ignore = "D100,D213,D401,D413,D107"
 minversion = "6.0"
 testpaths = ["tests"]
 filterwarnings = ["error"]
+addopts = ["--cov"]
+
+[tool.coverage.run]
+source = ['src/in_n_out']
+command_line = "-m pytest"
+
+# https://coverage.readthedocs.io/en/6.4/config.html
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "except ImportError",
+]
+show_missing = true
+skip_covered = true
 
 # https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
@@ -119,16 +135,6 @@ pretty = true
 [[tool.mypy.overrides]]
 modules = ['tests.*']
 disallow_untyped_defs = false
-
-
-# https://coverage.readthedocs.io/en/6.4/config.html
-[tool.coverage.report]
-exclude_lines = [
-    "pragma: no cover",
-    "if TYPE_CHECKING:",
-    "@overload",
-    "except ImportError",
-]
 
 # https://github.com/cruft/cruft
 [tool.cruft]

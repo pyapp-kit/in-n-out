@@ -3,10 +3,11 @@ from __future__ import annotations
 import warnings
 from functools import wraps
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Union, cast, overload
 
 from ._processors import get_processor
 from ._providers import get_provider
+from ._store import Store
 from ._type_resolution import type_resolved_signature
 
 if TYPE_CHECKING:
@@ -20,13 +21,38 @@ if TYPE_CHECKING:
     RaiseWarnReturnIgnore = Literal["raise", "warn", "return", "ignore"]
 
 
+@overload
 def inject_dependencies(
     func: Callable[P, R],
     *,
     localns: Optional[dict] = None,
+    store: Union[str, Store, None] = None,
     on_unresolved_required_args: RaiseWarnReturnIgnore = "raise",
     on_unannotated_required_args: RaiseWarnReturnIgnore = "warn",
 ) -> Callable[P, R]:
+    ...
+
+
+@overload
+def inject_dependencies(
+    func: Literal[None] = None,
+    *,
+    localns: Optional[dict] = None,
+    store: Union[str, Store, None] = None,
+    on_unresolved_required_args: RaiseWarnReturnIgnore = "raise",
+    on_unannotated_required_args: RaiseWarnReturnIgnore = "warn",
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    ...
+
+
+def inject_dependencies(
+    func: Callable[P, R] = None,
+    *,
+    localns: Optional[dict] = None,
+    store: Union[str, Store, None] = None,
+    on_unresolved_required_args: RaiseWarnReturnIgnore = "raise",
+    on_unannotated_required_args: RaiseWarnReturnIgnore = "warn",
+) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
     """Decorator returns func that can access/process objects based on type hints.
 
     This is form of dependency injection, and result processing.  It does 2 things:
@@ -46,6 +72,9 @@ def inject_dependencies(
         a function with type hints
     localns : Optional[dict]
         Optional local namespace for name resolution, by default None
+    store : Union[str, Store, None]
+        Optional store to use when retrieving providers and processors,
+        by default the global store will be used.
     on_unresolved_required_args : RaiseWarnReturnIgnore
         What to do when a required parameter (one without a default) is encountered
         with an unresolvable type annotation.
@@ -73,85 +102,93 @@ def inject_dependencies(
     Callable
         A function with dependencies injected
     """
-    # if the function takes no arguments and has no return annotation
-    # there's nothing to be done
-    if not func.__code__.co_argcount and "return" not in getattr(
-        func, "__annotations__", {}
-    ):
-        return func
+    _store = store if isinstance(store, Store) else Store.get_store(store)
 
-    # get a signature object with all type annotations resolved
-    # this may result in a NameError if a required argument is unresolveable.
-    # There may also be unannotated required arguments, which will likely fail
-    # when the function is called later. We break this out into a seperate
-    # function to handle notifying the user on these cases.
-    sig = _resolve_sig_or_inform(
-        func,
-        localns,
-        on_unresolved_required_args,
-        on_unannotated_required_args,
-    )
-    if sig is None:  # something went wrong, and the user was notified.
-        return func
-    process_return = sig.return_annotation is not sig.empty
+    # inner decorator, allows for optional decorator arguments
+    def _inner(func: Callable[P, R]) -> Callable[P, R]:
+        # if the function takes no arguments and has no return annotation
+        # there's nothing to be done
+        if not func.__code__.co_argcount and "return" not in getattr(
+            func, "__annotations__", {}
+        ):
+            return func
 
-    # get provider functions for each required parameter
-    @wraps(func)
-    def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
-        # sourcery skip: use-named-expression
-        # we're actually calling the "injected function" now
+        # get a signature object with all type annotations resolved
+        # this may result in a NameError if a required argument is unresolveable.
+        # There may also be unannotated required arguments, which will likely fail
+        # when the function is called later. We break this out into a seperate
+        # function to handle notifying the user on these cases.
+        sig = _resolve_sig_or_inform(
+            func,
+            localns={**_store.namespace, **(localns or {})},
+            on_unresolved_required_args=on_unresolved_required_args,
+            on_unannotated_required_args=on_unannotated_required_args,
+        )
+        if sig is None:  # something went wrong, and the user was notified.
+            return func
+        process_return = sig.return_annotation is not sig.empty
 
-        _sig = cast("Signature", sig)
-        # first, get and call the provider functions for each parameter type:
-        _kwargs = {}
-        for param in _sig.parameters.values():
-            provider: Optional[Callable] = get_provider(param.annotation)
-            if provider:
-                _kwargs[param.name] = provider()
-
-        # use bind_partial to allow the caller to still provide their own arguments
-        # if desired. (i.e. the injected deps are only used if not provided)
-        bound = _sig.bind_partial(*args, **kwargs)
-        bound.apply_defaults()
-        _kwargs.update(**bound.arguments)
-
-        try:  # call the function with injected values
-            result = func(**_kwargs)  # type: ignore [arg-type]
-        except TypeError as e:
-            # likely a required argument is still missing.
-            raise TypeError(
-                f"After injecting dependencies for arguments {set(_kwargs)}, {e}"
-            ) from e
-
-        if process_return:
-            processor = get_processor(_sig.return_annotation)
-            if processor:
-                processor(result)
-
-        return result
-
-    out = _exec
-
-    # if it came in as a generatorfunction, it needs to go out as one.
-    if isgeneratorfunction(func):
-
+        # get provider functions for each required parameter
         @wraps(func)
-        def _gexec(*args: P.args, **kwargs: P.kwargs) -> R:  # type: ignore [misc]
-            yield from _exec(*args, **kwargs)  # type: ignore [misc]
+        def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
+            # sourcery skip: use-named-expression
+            # we're actually calling the "injected function" now
 
-        out = _gexec
+            _sig = cast("Signature", sig)
+            # first, get and call the provider functions for each parameter type:
+            _kwargs = {}
+            for param in _sig.parameters.values():
+                provider: Optional[Callable] = get_provider(
+                    param.annotation, store=store
+                )
+                if provider:
+                    _kwargs[param.name] = provider()
 
-    # update some metadata on the decorated function.
-    out.__signature__ = sig  # type: ignore [attr-defined]
-    out.__annotations__ = {
-        **{p.name: p.annotation for p in sig.parameters.values()},
-        "return": sig.return_annotation,
-    }
-    out.__doc__ = (
-        out.__doc__ or ""
-    ) + "\n\n*This function will inject dependencies when called.*"
-    out._dependencies_injected = True  # type: ignore [attr-defined]
-    return out
+            # use bind_partial to allow the caller to still provide their own arguments
+            # if desired. (i.e. the injected deps are only used if not provided)
+            bound = _sig.bind_partial(*args, **kwargs)
+            bound.apply_defaults()
+            _kwargs.update(**bound.arguments)
+
+            try:  # call the function with injected values
+                result = func(**_kwargs)  # type: ignore [arg-type]
+            except TypeError as e:
+                # likely a required argument is still missing.
+                raise TypeError(
+                    f"After injecting dependencies for arguments {set(_kwargs)}, {e}"
+                ) from e
+
+            if process_return:
+                processor = get_processor(_sig.return_annotation, store=store)
+                if processor:
+                    processor(result)
+
+            return result
+
+        out = _exec
+
+        # if it came in as a generatorfunction, it needs to go out as one.
+        if isgeneratorfunction(func):
+
+            @wraps(func)
+            def _gexec(*args: P.args, **kwargs: P.kwargs) -> R:  # type: ignore [misc]
+                yield from _exec(*args, **kwargs)  # type: ignore [misc]
+
+            out = _gexec
+
+        # update some metadata on the decorated function.
+        out.__signature__ = sig  # type: ignore [attr-defined]
+        out.__annotations__ = {
+            **{p.name: p.annotation for p in sig.parameters.values()},
+            "return": sig.return_annotation,
+        }
+        out.__doc__ = (
+            out.__doc__ or ""
+        ) + "\n\n*This function will inject dependencies when called.*"
+        out._dependencies_injected = True  # type: ignore [attr-defined]
+        return out
+
+    return _inner(func) if func is not None else _inner
 
 
 def _resolve_sig_or_inform(

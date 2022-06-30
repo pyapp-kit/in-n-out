@@ -63,12 +63,16 @@ class set_providers:
 
 
 @overload
-def get_provider(type_: Type[T]) -> Union[Callable[[], T], None]:
+def get_provider(
+    type_: Type[T], store: Union[str, Store, None] = None
+) -> Union[Callable[[], T], None]:
     ...
 
 
 @overload
-def get_provider(type_: object) -> Union[Callable[[], Optional[T]], None]:
+def get_provider(
+    type_: object, store: Union[str, Store, None] = None
+) -> Union[Callable[[], Optional[T]], None]:
     # `object` captures passing get_provider(Optional[type])
     ...
 
@@ -110,12 +114,20 @@ def _get_provider(
 
 
 @overload
-def clear_provider(type_: Type[T]) -> Union[Callable[[], T], None]:
+def clear_provider(
+    type_: Type[T],
+    warn_missing: bool = False,
+    store: Union[str, Store, None] = None,
+) -> Union[Callable[[], T], None]:
     ...
 
 
 @overload
-def clear_provider(type_: object) -> Union[Callable[[], Optional[T]], None]:
+def clear_provider(
+    type_: object,
+    warn_missing: bool = False,
+    store: Union[str, Store, None] = None,
+) -> Union[Callable[[], Optional[T]], None]:
     ...
 
 

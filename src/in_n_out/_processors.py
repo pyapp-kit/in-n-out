@@ -93,12 +93,20 @@ def get_processor(
 
 
 @overload
-def clear_processor(type_: Type[T]) -> Union[Callable[[], T], None]:
+def clear_processor(
+    type_: Type[T],
+    warn_missing: bool = False,
+    store: Union[str, Store, None] = None,
+) -> Union[Callable[[], T], None]:
     ...
 
 
 @overload
-def clear_processor(type_: object) -> Union[Callable[[], Optional[T]], None]:
+def clear_processor(
+    type_: object,
+    warn_missing: bool = False,
+    store: Union[str, Store, None] = None,
+) -> Union[Callable[[], Optional[T]], None]:
     ...
 
 
