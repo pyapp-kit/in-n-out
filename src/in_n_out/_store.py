@@ -110,7 +110,7 @@ class Store:
         self.processors.clear()
 
     @property
-    def namespace(self) -> dict[str, object]:
+    def namespace(self) -> Dict[str, object]:
         """Return namespace for type resolution, if this store has one.
 
         If no namespace is set, this will return an empty `dict`.
