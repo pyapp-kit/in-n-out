@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import wraps
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, List, Union, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Union, overload
 
 from ._store import Store
 from ._type_resolution import type_resolved_signature
@@ -143,12 +143,16 @@ def inject_dependencies(
                 if provider:
                     _kwargs[name] = provider()
 
-            # # use bind_partial to allow the caller to still provide their own args
-            # # if desired. (i.e. the injected deps are only used if not provided)
+            # this would be a safer way to merge arguments, but it's much slower
             # bound = sig.bind_partial(*args, **kwargs)  # type: ignore
             # bound.apply_defaults()
             # _kwargs.update(**bound.arguments)
-            _kwargs.update(dict(zip(names, args)))  # type: ignore
+
+            # significantly faster
+            _argdict: Dict[str, Any] = dict(zip(names, args))  # type: ignore
+            assert all(i not in _argdict for i in kwargs)
+            _kwargs.update(_argdict)
+            _kwargs.update(kwargs)
 
             try:  # call the function with injected values
                 result = func(**_kwargs)
