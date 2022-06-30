@@ -105,53 +105,56 @@ jobs:
           fail_ci_if_error: true
           verbose: true
 
-  deploy:
-    name: Deploy
-    needs: test
-    if: "success() && startsWith(github.ref, 'refs/tags/')"
-    runs-on: ubuntu-latest
+  build:
+    name: Build wheels on ${{ matrix.os }}
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-20.04, windows-2019, macos-10.15]
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
-          python-version: "3.x"
+          python-version: "3.9"
 
-      - name: install
+      - name: Build wheels
+        uses: pypa/cibuildwheel@2.7.0
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+
+      - name: Build sdist
+        if: matrix.os == 'ubuntu-20.04'
         run: |
-          git tag
-          pip install -U pip
-          pip install -U build twine
-          python -m build
-          twine check dist/*
-          ls -lh dist
+          python -m pip install build
+          python -m build --sdist
 
-      - name: Build and publish
-        run: twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TWINE_API_KEY }}
+      - uses: actions/upload-artifact@v3
+        if: matrix.os == 'ubuntu-20.04'
+        with:
+          path: dist/*.tar.gz
+
+  upload_pypi:
+    name: Deploy
+    needs: [check-manifest, build]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: artifact
+          path: dist
+
+      - uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_token }}
 
       - uses: softprops/action-gh-release@v1
         with:
           generate_release_notes: true
-
-  # [WIP]
-  # https://python-semantic-release.readthedocs.io/en/latest/automatic-releases/github-actions.html
-  # release:
-  #   runs-on: ubuntu-latest
-  #   concurrency: release
-
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #     with:
-  #       fetch-depth: 0
-
-  #   - name: Python Semantic Release
-  #     uses: relekang/python-semantic-release@master
-  #     with:
-  #       github_token: ${{ secrets.GITHUB_TOKEN }}
-  #       repository_username: __token__
-  #       repository_password: ${{ secrets.TWINE_API_KEY }}

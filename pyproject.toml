@@ -106,7 +106,6 @@ ignore = "D100,D213,D401,D413,D107"
 minversion = "6.0"
 testpaths = ["tests"]
 filterwarnings = ["error"]
-addopts = ["--cov"]
 
 [tool.coverage.run]
 source = ['src/in_n_out']
@@ -166,3 +165,15 @@ branch = "main"
 changelog_sections = "feature,fix,breaking,documentation,performance,chore,:boom:,:sparkles:,:children_crossing:,:lipstick:,:iphone:,:egg:,:chart_with_upwards_trend:,:ambulance:,:lock:,:bug:,:zap:,:goal_net:,:alien:,:wheelchair:,:speech_balloon:,:mag:,:apple:,:penguin:,:checkered_flag:,:robot:,:green_apple:,Other"
 # commit_parser=semantic_release.history.angular_parser
 build_command = "pip install build && python -m build"
+
+
+[tool.cibuildwheel]
+# Skip 32-bit builds & PyPy wheels on all platforms
+skip = ["*-win32", "pp*"]
+test-extras = ["test"]
+test-command = "pytest {project}/tests -v"
+test-skip = "*-musllinux* *-manylinux_i686"
+
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
