@@ -91,7 +91,7 @@ D105  # missing docstring in magic method
 D401  # imperative mood
 W503  # line break before binary operator
 """
-per-file-ignores = ["tests/*:D"]
+per-file-ignores = ["tests/*,benchmarks/*:D"]
 
 
 # http://www.pydocstyle.org/en/stable/usage.html
@@ -152,6 +152,8 @@ ignore = [
     "tox.ini",
     "Makefile",
     "codecov.yml",
+    "asv.conf.json",
+    "benchmarks/**/*",
 ]
 
 # https://python-semantic-release.readthedocs.io/en/latest/configuration.html

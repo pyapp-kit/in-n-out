@@ -1,4 +1,4 @@
-.PHONY: build build-trace check clean cleanc
+.PHONY: build build-trace check clean cleanc benchmark-all benchmark-compare
 
 build:
 	python setup.py build_ext --inplace
@@ -30,3 +30,14 @@ clean:
 	rm -f `find src/in_n_out -type f -name '*.c' `
 	rm -f `find src/in_n_out -type f -name '*.so' `
 	rm -rf coverage.xml
+
+# run benchmarks for all commits since v0.1.0
+benchmark-all:
+	pip install asv
+	asv run -j 4 --show-stderr --interleave-processes --skip-existing v0.1.0..HEAD
+
+# compare HEAD against main
+benchmark-compare:
+	asv run --interleave-processes --skip-existing main^!
+	asv run --interleave-processes HEAD^!
+	asv compare --split --factor 1.15 main HEAD
