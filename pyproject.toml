@@ -21,7 +21,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    'git+https://github.com/tlambert03/beartype.git@math-mod'
+    'beartype @ git+https://github.com/tlambert03/beartype.git@math-mod'
 ]
 
 # extras
