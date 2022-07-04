@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, processor, set_processors
+from in_n_out import Store, iter_processors, processor, set_processors
 
 R = object()
 
@@ -95,7 +95,7 @@ def test_optional_processors(test_store: Store):
     # which means it also provides an Optional[str]
     assert next(test_store.iter_processors(Optional[str])) is processes_string
 
-    assert next(test_store.iter_processors(int)) is processes_int
+    assert next(iter_processors(int, store=test_store)) is processes_int
     # the definite processor takes precedence
     # TODO: consider this...
     assert next(test_store.iter_processors(Optional[int])) is processes_int

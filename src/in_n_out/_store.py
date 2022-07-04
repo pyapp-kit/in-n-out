@@ -407,7 +407,7 @@ class Store:
         for processor in self.iter_processors(hint):  # type: ignore
             try:
                 processor(result)
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 if raise_exception:
                     raise e
                 warnings.warn(
