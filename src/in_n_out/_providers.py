@@ -19,23 +19,17 @@ class set_providers:
     "Providers" are functions that can retrieve an instance of a given type.
 
     This is a class that behaves as a function or a context manager, that
-    allows one to set a provider function for a given type.
+    allows one to set a provider function for a given type temporarily.
+
+    If not used as a context, the provider function is set permanently.
 
     Parameters
     ----------
-    mapping : Dict[Type[T], Callable[..., Optional[T]]]
-        a map of type -> provider function, where each value is a function
-        that is capable of retrieving an instance of the associated key/type.
-    clobber : bool, optional
-        Whether to override any existing provider function, by default False.
+    providers : Union[Mapping[object, Callable], ProviderProcessorIterable]
+        Either a mapping of {type_hint: provider} pairs, or an iterable of
+        (type_hint, provider) or (type_hint, provider, weight) tuples.
     store : Union[str, Store, None]
         The provider store to use, if not provided the global store is used.
-
-    Raises
-    ------
-    ValueError
-        if clobber is `False` and one of the keys in `mapping` is already
-        registered.
     """
 
     def __init__(
@@ -57,26 +51,19 @@ class set_providers:
 def iter_providers(
     type_: Union[object, Type[T]], store: Union[str, Store, None] = None
 ) -> Iterable[Callable[[], Optional[T]]]:
-    """Return object provider function given a type.
-
-    An object provider is a function that returns an instance of a
-    particular object type.
+    """Iterate over all providers of `type_`.
 
     Parameters
     ----------
-    type_ : Type[T] or Type Hint
-        Type for which to get the provider.
+    type_ : Union[object, Type[T]]
+        A type or type hint for which to return providers.
     store : Union[str, Store, None]
         The provider store to use, if not provided the global store is used.
 
-    Returns
-    -------
-    Optional[Callable[[T], Any]]
-        A provider function registered for `type_`, if any.
-
-    Examples
-    --------
-    >>> get_provider(int)
+    Yields
+    ------
+    Iterable[Callable[[], Optional[T]]]
+        Iterable of provider callbacks.
     """
     store = store if isinstance(store, Store) else Store.get_store(store)
     yield from store.iter_providers(type_)
@@ -123,6 +110,12 @@ def provider(
     ----------
     func : Optional[Provider], optional
         A function to decorate. If not provided, a decorator is returned.
+    weight : float
+        A weight with which to sort this provider. Higher weights are given
+        priority, by default 0
+    for_type : Optional[object]
+        Optional type or type hint for which to register this provider. If not
+        provided, the return annotation of `func` will be used.
     store : Union[str, Store, None]
         The Provider store to use, if not provided the global store is used.
 
@@ -138,6 +131,5 @@ def provider(
     >>> def provide_int() -> int:
     ...     return 42
     """
-
     store = store if isinstance(store, Store) else Store.get_store(store)
     return store.provider(func, weight=weight, for_type=for_type)

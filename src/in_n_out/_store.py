@@ -26,8 +26,10 @@ from ._type_resolution import resolve_type_hints
 from ._util import _check_optional
 
 T = TypeVar("T")
-Provider = TypeVar("Provider", bound=Callable[[], Any])
-Processor = TypeVar("Processor", bound=Callable[[Any], Any])
+Provider = Callable[[], Any]
+Processor = Callable[[Any], Any]
+Disposer = Callable[[], None]
+
 _GLOBAL = "global"
 
 Namespace = Mapping[str, object]
@@ -158,31 +160,85 @@ class Store:
     def register_provider(
         self,
         type_hint: object,
-        provider: Callable,
+        provider: Provider,
         weight: float = 0,
-    ) -> Callable:
+    ) -> Disposer:
+        """Register `provider` as a provider of `type_hint`.
+
+        Parameters
+        ----------
+        type_hint : object
+            A type or type hint that `provider` provides.
+        provider : Callable
+            A provider callback. Must be able to accept no arguments.
+        weight : float, optional
+            A weight with which to sort this provider. Higher weights are given
+            priority, by default 0
+
+        Returns
+        -------
+        Callable
+            A function that unregisters the provider.
+        """
         return self.register_providers([(type_hint, provider, weight)])
 
     def register_providers(
         self,
         providers: Union[Mapping[object, Callable], ProviderProcessorIterable],
-    ) -> Callable:
+    ) -> Disposer:
+        """Register multiple providers at once.
+
+        Parameters
+        ----------
+        providers : Union[Mapping[object, Callable], ProviderProcessorIterable]
+            Either a mapping of {type_hint: provider} pairs, or an iterable of
+            (type_hint, provider) or (type_hint, provider, weight) tuples.
+
+        Returns
+        -------
+        Callable
+            A function that unregisters the provider.
+        """
         return self._register_callbacks(providers, True)
 
-    @cached_property
-    def _cached_provider_map(self) -> Dict[TypeHint, List[Callable]]:
-        return self._build_map(self._providers)
-
     def iter_providers(
-        self, type_: Union[object, Type[T]]
+        self, hint: Union[object, Type[T]]
     ) -> Iterable[Callable[[], Optional[T]]]:
-        th = TypeHint(_check_optional(type_)[0])
+        """Iterate over all providers of `hint`.
+
+        Parameters
+        ----------
+        hint : Union[object, Type[T]]
+            A type or type hint for which to return providers.
+
+        Yields
+        ------
+        Iterable[Callable[[], Optional[T]]]
+            Iterable of provider callbacks.
+        """
+        th = TypeHint(_check_optional(hint)[0])
         for hint, providers in self._cached_provider_map.items():
             if th.is_subtype(hint):
                 yield from providers
 
-    def provide(self, type_: Union[object, Type[T]]) -> Optional[T]:
-        for provider in self.iter_providers(type_):
+    def provide(self, hint: Union[object, Type[T]]) -> Optional[T]:
+        """Provide an instance of `hint`.
+
+        This will iterate over all providers of `hint` and return the first
+        one that returns a non-`None` value.
+
+        Parameters
+        ----------
+        hint : Union[object, Type[T]]
+            A type or type hint for which to return a value
+
+        Returns
+        -------
+        Optional[T]
+            The first non-`None` value returned by a provider, or `None` if no
+            providers return a value.
+        """
+        for provider in self.iter_providers(hint):
             result = provider()
             if result is not None:
                 return result
@@ -215,6 +271,35 @@ class Store:
         weight: float = 0,
         for_type: Optional[object] = None,
     ) -> Union[Callable[[Provider], Provider], Provider]:
+        """Decorate `func` as a provider of its first parameter type.
+
+        Note, If func returns `Optional[Type]`, it will be registered as a provider
+        for Type.
+
+        Parameters
+        ----------
+        func : Optional[Provider]
+            A function to decorate. If not provided, a decorator is returned.
+        weight : float
+            A weight with which to sort this provider. Higher weights are given
+            priority, by default 0
+        for_type : Optional[object]
+            Optional type or type hint for which to register this provider. If not
+            provided, the return annotation of `func` will be used.
+
+        Returns
+        -------
+        Union[Callable[[Provider], Provider], Provider]
+            If `func` is not provided, a decorator is returned, if `func` is provided
+            then the function is returned..
+
+        Examples
+        --------
+        >>> @store.provider
+        >>> def provide_int() -> int:
+        ...     return 42
+        """
+
         def _deco(func: Provider, hint: Optional[object] = for_type) -> Provider:
             if hint is None:
                 hint = resolve_type_hints(func, localns=self.namespace).get("return")
@@ -226,38 +311,100 @@ class Store:
 
         return _deco(func) if func is not None else _deco
 
+    # -----------------------
+
     def register_processor(
         self,
         type_hint: object,
-        processor: Callable,
+        processor: Processor,
         weight: float = 0,
-    ) -> Callable:
+    ) -> Disposer:
+        """Register `processor` as a processor of `type_hint`.
+
+        Parameters
+        ----------
+        type_hint : object
+            A type or type hint that `processor` can handle.
+        processor : Callable
+            A processor callback. Must accept at least one argument.
+        weight : float, optional
+            A weight with which to sort this processor. Higher weights are given
+            priority, by default 0.  When invoking processors, all processors
+            will be invoked in descending weight order, unless `first_processor_only`
+            is set to `True`.
+
+        Returns
+        -------
+        Callable
+            A function that unregisters the processor.
+        """
         return self.register_processors([(type_hint, processor, weight)])
 
     def register_processors(
         self,
-        processors: Union[Mapping[object, Callable], ProviderProcessorIterable],
-    ) -> Callable:
+        processors: Union[Mapping[object, Processor], ProviderProcessorIterable],
+    ) -> Disposer:
+        """Register multiple processors at once.
+
+        Parameters
+        ----------
+        processors : Union[Mapping[object, Callable], ProviderProcessorIterable]
+            Either a mapping of {type_hint: processor} pairs, or an iterable of
+            (type_hint, processor) or (type_hint, processor, weight) tuples.
+
+        Returns
+        -------
+        Callable
+            A function that unregisters the provider.
+        """
         return self._register_callbacks(processors, False)
 
-    @cached_property
-    def _cached_processor_map(self) -> Dict[TypeHint, List[Callable[[Any], None]]]:
-        return self._build_map(self._processors)
+    def iter_processors(
+        self, hint: Union[object, Type[T]]
+    ) -> Iterable[Callable[[T], Any]]:
+        """Iterate over all processors of `hint`.
 
-    def iter_processors(self, type_: object) -> Iterable[Callable[[Any], None]]:
-        th = TypeHint(_check_optional(type_)[0])
-        for hint, processor in self._cached_processor_map.items():
-            if th.is_subtype(hint):
+        Parameters
+        ----------
+        hint : Union[object, Type[T]]
+            A type or type hint for which to return processors.
+
+        Yields
+        ------
+        Iterable[Callable[[], Optional[T]]]
+            Iterable of processor callbacks.
+        """
+        th = TypeHint(_check_optional(hint)[0])
+        for _hint, processor in self._cached_processor_map.items():
+            if th.is_subtype(_hint):
                 yield from processor
 
     def process(
         self,
-        hint: object,
+        hint: Union[object, Type[T]],
         result: Any,
         first_processor_only: bool = False,
         raise_exception: bool = False,
     ) -> None:
-        for processor in self.iter_processors(hint):
+        """Provide an instance of `type_`.
+
+        This will iterate over all providers of `type_` and return the first
+        one that returns a non-`None` value.
+
+        Parameters
+        ----------
+        hint : object
+            A type or type hint for which to return a value
+        result : Any
+            The result to process
+        first_processor_only : bool, optional
+            If `True`, only the first processor will be invoked, otherwise all
+            processors will be invoked, in descending weight order.
+        raise_exception : bool, optional
+            If `True`, and a processor raises an exception, it will be raised
+            and the remaining processors will not be invoked.
+        """
+        for processor in self.iter_processors(hint):  # type: ignore
             try:
                 processor(result)
             except Exception as e:
@@ -268,6 +415,88 @@ class Store:
                 )
             if first_processor_only:
                 break
+
+    @overload
+    def processor(
+        self,
+        func: Processor,
+        *,
+        weight: float = 0,
+        for_type: Optional[object] = None,
+    ) -> Processor:
+        ...
+
+    @overload
+    def processor(
+        self,
+        func: Literal[None] = ...,
+        *,
+        weight: float = 0,
+        for_type: Optional[object] = None,
+    ) -> Callable[[Processor], Processor]:
+        ...
+
+    def processor(
+        self,
+        func: Optional[Processor] = None,
+        *,
+        weight: float = 0,
+        for_type: Optional[object] = None,
+    ) -> Union[Callable[[Processor], Processor], Processor]:
+        """Decorate `func` as a processor of its first parameter type.
+
+        Parameters
+        ----------
+        func : Optional[Processor], optional
+            A function to decorate. If not provided, a decorator is returned.
+        weight : float, optional
+            A weight with which to sort this processor. Higher weights are given
+            priority, by default 0.  When invoking processors, all processors
+            will be invoked in descending weight order, unless `first_processor_only`
+            is set to `True`.
+        for_type : Optional[object]
+            Optional type or type hint that this processor can handle. If not
+            provided, the type hint of the first parameter of `func` will be used.
+
+        Returns
+        -------
+        Union[Callable[[Processor], Processor], Processor]
+            If `func` is not provided, a decorator is returned, if `func` is provided
+            then the function is returned.
+
+        Examples
+        --------
+        >>> @store.processor
+        >>> def process_int(x: int) -> None:
+        ...     print("Processing int:", x)
+        """
+
+        def _deco(func: Processor, hint: Optional[object] = for_type) -> Processor:
+            if hint is None:
+                hints = resolve_type_hints(func, localns=self.namespace)
+                hints.pop("return", None)
+                if hints:
+                    hint = list(hints.values())[0]
+
+            if hint is None:
+                warnings.warn(
+                    f"{func} has no argument type hints. Cannot be a processor."
+                )
+            else:
+                self.register_processor(type_hint=hint, processor=func, weight=weight)
+            return func
+
+        return _deco(func) if func is not None else _deco
+
+    # -----------------
+
+    @cached_property
+    def _cached_provider_map(self) -> Dict[TypeHint, List[Provider]]:
+        return self._build_map(self._providers)
+
+    @cached_property
+    def _cached_processor_map(self) -> Dict[TypeHint, List[Processor]]:
+        return self._build_map(self._processors)
 
     def _build_map(
         self, registry: List[_RegisteredCallback]
@@ -296,7 +525,7 @@ class Store:
         self,
         callbacks: Union[Mapping[object, Callable], ProviderProcessorIterable],
         providers: bool = True,
-    ) -> Callable[[], None]:
+    ) -> Disposer:
 
         _p: List[_RegisteredCallback] = []
 

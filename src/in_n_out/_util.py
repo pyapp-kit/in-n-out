@@ -17,5 +17,5 @@ def _check_optional(type_: Any) -> Tuple[Type, bool]:
         args = get_args(type_)
         if args and type(None) in args:
             optional = True
-            type_ = Union[tuple(x for x in args if x is not type(None))]
+            type_ = Union[tuple(x for x in args if x is not type(None))]  # noqa
     return type_, optional
