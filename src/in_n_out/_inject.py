@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from functools import wraps
 from inspect import isgeneratorfunction
+from types import CodeType
 from typing import TYPE_CHECKING, Any, Dict, Union, cast, overload
 
 from ._store import Store
@@ -106,7 +107,8 @@ def inject_dependencies(
     def _inner(func: Callable[P, R]) -> Callable[P, R]:
         # if the function takes no arguments and has no return annotation
         # there's nothing to be done
-        if not func.__code__.co_argcount and "return" not in getattr(
+        code: Optional[CodeType] = getattr(func, "__code__", None)
+        if (code and not code.co_argcount) and "return" not in getattr(
             func, "__annotations__", {}
         ):
             return func

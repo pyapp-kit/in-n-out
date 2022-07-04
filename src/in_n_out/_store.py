@@ -13,6 +13,7 @@ from typing import (
     Mapping,
     NamedTuple,
     Optional,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -37,7 +38,7 @@ Namespace = Mapping[str, object]
 HintArg = object
 Weight = float
 ProviderProcessorIterable = Iterable[
-    Union[tuple[HintArg, Callable], tuple[HintArg, Callable, Weight]]
+    Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
 ]
 
 

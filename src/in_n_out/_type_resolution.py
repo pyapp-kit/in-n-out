@@ -125,7 +125,7 @@ def type_resolved_signature(
             func,
             localns=localns,
         )
-    except NameError as err:
+    except (NameError, TypeError) as err:
         if raise_unresolved_optional_args:
             raise NameError(
                 f"Could not resolve all annotations in signature {sig} ({err}). "
