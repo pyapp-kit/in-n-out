@@ -1,19 +1,13 @@
+from typing import Iterator
+
 import pytest
 
 from in_n_out._store import Store
 
 
 @pytest.fixture
-def test_store():
-
-    store = Store.create("test")
+def test_store() -> Iterator[Store]:
     try:
-        yield store
+        yield Store.create("test")
     finally:
         Store.destroy("test")
-
-
-# @pytest.fixture(autouse=True)
-# def _clean_store():
-#     yield
-#     Store.get_store().clear()

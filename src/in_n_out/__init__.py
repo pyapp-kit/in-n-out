@@ -11,7 +11,7 @@ __email__ = "talley.lambert@gmail.com"
 
 from ._inject import inject_dependencies
 from ._processors import get_processor, processor, set_processors
-from ._providers import get_provider, provider, set_providers
+from ._providers import iter_providers, provider, set_providers
 from ._store import Store
 from ._type_resolution import (
     resolve_single_type_hints,
@@ -23,7 +23,7 @@ from ._util import _compiled
 __all__ = [
     "_compiled",
     "get_processor",
-    "get_provider",
+    "iter_providers",
     "inject_dependencies",
     "processor",
     "provider",

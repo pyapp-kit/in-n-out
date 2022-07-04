@@ -39,21 +39,21 @@ def test_create_get_destroy():
 
 def test_store_clear(test_store: Store):
 
-    assert not test_store.providers
+    assert not test_store._providers
     assert not test_store.opt_providers
-    assert not test_store.processors
+    assert not test_store._processors
 
     set_providers({int: 1}, store=test_store)
     set_providers({Optional[str]: None}, store=test_store)
     set_processors({int: print}, store=test_store)
-    assert len(test_store.providers) == 1
+    assert len(test_store._providers) == 1
     assert len(test_store.opt_providers) == 1
-    assert len(test_store.processors) == 1
+    assert len(test_store._processors) == 1
 
     test_store.clear()
-    assert not test_store.providers
+    assert not test_store._providers
     assert not test_store.opt_providers
-    assert not test_store.processors
+    assert not test_store._processors
 
 
 def test_store_namespace(test_store: Store):

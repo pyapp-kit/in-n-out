@@ -1,23 +1,28 @@
 import contextlib
-from collections import ChainMap
+import warnings
+from functools import cached_property
 from inspect import CO_VARARGS
 from types import CodeType
 from typing import (
     Any,
     Callable,
     Dict,
-    Generic,
-    Iterator,
+    Iterable,
+    List,
+    Literal,
     Mapping,
     NamedTuple,
     Optional,
-    Tuple,
     Type,
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
+from beartype.math import TypeHint
+
+from ._type_resolution import resolve_type_hints
 from ._util import _check_optional
 
 T = TypeVar("T")
@@ -27,12 +32,25 @@ _GLOBAL = "global"
 
 Namespace = Mapping[str, object]
 
+HintArg = object
+Weight = float
+ProviderProcessorIterable = Iterable[
+    Union[tuple[HintArg, Callable], tuple[HintArg, Callable, Weight]]
+]
+
 
 class _NullSentinel:
     ...
 
 
-class Store(Generic[T]):
+class _RegisteredCallback(NamedTuple):
+    hint: TypeHint
+    callback: Callable
+    hint_optional: bool
+    weight: float
+
+
+class Store:
     """A Store is a collection of providers and processors."""
 
     _NULL = _NullSentinel()
@@ -103,9 +121,8 @@ class Store(Generic[T]):
 
     def __init__(self, name: str) -> None:
         self._name = name
-        self.providers: Dict[Type[T], Callable[[], T]] = {}
-        self.opt_providers: Dict[Type[T], Callable[[], Optional[T]]] = {}
-        self.processors: Dict[Type[T], Callable[[T], Any]] = {}
+        self._providers: List[_RegisteredCallback] = []
+        self._processors: List[_RegisteredCallback] = []
         self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
 
     @property
@@ -115,9 +132,12 @@ class Store(Generic[T]):
 
     def clear(self) -> None:
         """Clear all providers and processors."""
-        self.providers.clear()
-        self.opt_providers.clear()
-        self.processors.clear()
+        self._providers.clear()
+        self._processors.clear()
+        with contextlib.suppress(AttributeError):
+            del self._cached_processor_map
+        with contextlib.suppress(AttributeError):
+            del self._cached_provider_map
 
     @property
     def namespace(self) -> Dict[str, object]:
@@ -135,161 +155,194 @@ class Store(Generic[T]):
     def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]) -> None:
         self._namespace = ns
 
-    def _pop_processor(
-        self, type_: Union[object, Type[T]]
-    ) -> Optional[Callable[[T], Any]]:
-        type_, _ = _check_optional(type_)
-        return self.processors.pop(type_, None)
+    def register_provider(
+        self,
+        type_hint: object,
+        provider: Callable,
+        weight: float = 0,
+    ) -> Callable:
+        return self.register_providers([(type_hint, provider, weight)])
 
-    def _get_processor(
-        self, type_: Union[object, Type[T]]
-    ) -> Optional[Callable[[T], Any]]:
-        type_, _ = _check_optional(type_)
-        if type_ in self.processors:
-            return self.processors[type_]
+    def register_providers(
+        self,
+        providers: Union[Mapping[object, Callable], ProviderProcessorIterable],
+    ) -> Callable:
+        return self._register_callbacks(providers, True)
 
-        if isinstance(type_, type):
-            for key, val in self.processors.items():
-                with contextlib.suppress(TypeError):
-                    if issubclass(type_, key):
-                        return val
+    @cached_property
+    def _cached_provider_map(self) -> Dict[TypeHint, List[Callable]]:
+        return self._build_map(self._providers)
+
+    def iter_providers(
+        self, type_: Union[object, Type[T]]
+    ) -> Iterable[Callable[[], Optional[T]]]:
+        th = TypeHint(_check_optional(type_)[0])
+        for hint, providers in self._cached_provider_map.items():
+            if th.is_subtype(hint):
+                yield from providers
+
+    def provide(self, type_: Union[object, Type[T]]) -> Optional[T]:
+        for provider in self.iter_providers(type_):
+            result = provider()
+            if result is not None:
+                return result
         return None
 
-    def _pop_provider(
-        self, type_: Union[object, Type[T]]
-    ) -> Optional[Callable[[], Optional[T]]]:
-        type_, is_optional = _check_optional(type_)
-
-        # if we're popping `int`, we should also get rid of `Optional[int]`
-        opt_p = self.opt_providers.pop(type_, None)
-        if is_optional:
-            # if we're popping `Optional[int]`, we should not get rid of `int`
-            return opt_p
-        return self.providers.pop(type_, None) or opt_p
-
-    def _get_provider(self, type_: Union[object, Type[T]]) -> Optional[Callable[[], T]]:
-        type_, is_optional = _check_optional(type_)
-
-        # when retrieving a provider, we differentiate between optional and non-optional
-        # when trying to retrieve a processor, we don't, because we won't pass a value
-        # of `None` to a processor
-        _opt: Dict[Any, Callable] = self.opt_providers
-        _non_opt: Dict[Any, Callable] = self.providers
-        _map: Mapping[Type, Callable]
-        _map = ChainMap(_non_opt, _opt) if is_optional else _non_opt
-
-        if type_ in _map:
-            return _map[type_]
-
-        if isinstance(type_, type):
-            for key, val in _map.items():
-                with contextlib.suppress(TypeError):
-                    if issubclass(type_, key):
-                        return val
-        return None
-
-    def _iter_providers(self, type_: Union[object, Type[T]]) -> Optional[Callable[[], T]]:
-        type_, is_optional = _check_optional(type_)
-
-        # when retrieving a provider, we differentiate between optional and non-optional
-        # when trying to retrieve a processor, we don't, because we won't pass a value
-        # of `None` to a processor
-        _opt: Dict[Any, Callable] = self.opt_providers
-        _non_opt: Dict[Any, Callable] = self.providers
-        _map: Mapping[Type, Callable]
-        _map = ChainMap(_non_opt, _opt) if is_optional else _non_opt
-
-        if type_ in _map:
-            return _map[type_]
-
-        if isinstance(type_, type):
-            for key, val in _map.items():
-                with contextlib.suppress(TypeError):
-                    if issubclass(type_, key):
-                        return val
-        return None
-
-    def _get_provided(self, type_: Union[object, Type[T]]) -> T:
+    @overload
+    def provider(
+        self,
+        func: Provider,
+        *,
+        weight: float = 0,
+        for_type: Optional[object] = None,
+    ) -> Provider:
         ...
 
-    def _set_processor(
+    @overload
+    def provider(
         self,
-        mapping: Mapping[Union[Type[T], object], Callable[[T], Any]],
-        clobber: bool,
-    ) -> Dict[Type[T], Union[_NullSentinel, Callable[[T], Any]]]:
-        _before: Dict[Type[T], Union[_NullSentinel, Callable[[T], Any]]] = {}
-        _validated: Dict[Type[T], Callable[[T], Any]] = {}
+        func: Literal[None] = ...,
+        *,
+        weight: float = 0,
+        for_type: Optional[object] = None,
+    ) -> Callable[[Provider], Provider]:
+        ...
 
-        for type_, processor in mapping.items():
-            valid_processor = _validate_processor(processor)
+    def provider(
+        self,
+        func: Optional[Provider] = None,
+        *,
+        weight: float = 0,
+        for_type: Optional[object] = None,
+    ) -> Union[Callable[[Provider], Provider], Provider]:
+        def _deco(func: Provider, hint: Optional[object] = for_type) -> Provider:
+            if hint is None:
+                hint = resolve_type_hints(func, localns=self.namespace).get("return")
+            if hint is None:
+                warnings.warn(f"{func} has no return type hint. Cannot be a provider.")
+            else:
+                self.register_provider(type_hint=hint, provider=func, weight=weight)
+            return func
 
-            for origin, before in self._iter_before(type_, clobber):
+        return _deco(func) if func is not None else _deco
 
-                # get current value
-                _before[origin] = before
-                _validated[origin] = valid_processor
+    def register_processor(
+        self,
+        type_hint: object,
+        processor: Callable,
+        weight: float = 0,
+    ) -> Callable:
+        return self.register_processors([(type_hint, processor, weight)])
 
-        self.processors.update(_validated)
+    def register_processors(
+        self,
+        processors: Union[Mapping[object, Callable], ProviderProcessorIterable],
+    ) -> Callable:
+        return self._register_callbacks(processors, False)
 
-        return _before
+    @cached_property
+    def _cached_processor_map(self) -> Dict[TypeHint, List[Callable[[Any], None]]]:
+        return self._build_map(self._processors)
 
-    def _iter_before(
-        self, type_: Union[Type[T], object], clobber: bool
-    ) -> Iterator[Tuple[Type[T], Union[_NullSentinel, Callable[[T], Any]]]]:
-        origin, _ = _check_optional(type_)
+    def iter_processors(self, type_: object) -> Iterable[Callable[[Any], None]]:
+        th = TypeHint(_check_optional(type_)[0])
+        for hint, processor in self._cached_processor_map.items():
+            if th.is_subtype(hint):
+                yield from processor
 
-        if getattr(origin, "__origin__", None) is Union:
-            for arg in getattr(origin, "__args__", []):
-                yield from self._iter_before(arg, clobber)
+    def process(
+        self,
+        hint: object,
+        result: Any,
+        first_processor_only: bool = False,
+        raise_exception: bool = False,
+    ) -> None:
+        for processor in self.iter_processors(hint):
+            try:
+                processor(result)
+            except Exception as e:
+                if raise_exception:
+                    raise e
+                warnings.warn(
+                    f"Processor {processor!r} failed to process result {result!r}: {e}"
+                )
+            if first_processor_only:
+                break
+
+    def _build_map(
+        self, registry: List[_RegisteredCallback]
+    ) -> Dict[TypeHint, List[Callable]]:
+        """Build a map of type hints to callbacks.
+
+        This is the sorted and cached version of the map that will be used to resolve
+        a provider or processor.
+        """
+        out: Dict[TypeHint, List[_RegisteredCallback]] = {}
+        for p in registry:
+            if p.hint not in out:
+                out[p.hint] = []
+            out[p.hint].append(p)
+
+        return {
+            hint: [v.callback for v in sorted(val, key=self._sort_key, reverse=True)]
+            for hint, val in out.items()
+        }
+
+    def _sort_key(self, p: _RegisteredCallback) -> float:
+        """How we sort registered callbacks within the same type hint."""
+        return p.weight
+
+    def _register_callbacks(
+        self,
+        callbacks: Union[Mapping[object, Callable], ProviderProcessorIterable],
+        providers: bool = True,
+    ) -> Callable[[], None]:
+
+        _p: List[_RegisteredCallback] = []
+
+        if isinstance(callbacks, Mapping):
+            callbacks = callbacks.items()
+
+        if providers:
+            check: Callable[[Any], Callable] = _validate_provider
         else:
-            if origin in self.processors and not clobber:
-                raise ValueError(
-                    f"Type {type_} already has a processor and 'clobber' is False"
+            check = _validate_processor
+
+        for type_, callback, *weight in callbacks:
+            origin, is_optional = _check_optional(type_)
+            _p.append(
+                _RegisteredCallback(
+                    hint=TypeHint(origin),
+                    callback=check(callback),
+                    hint_optional=is_optional,
+                    weight=weight[0] if weight else 0,
                 )
-            # get current value
-            currently = self.processors.get(origin, self._NULL)
-            yield origin, currently
+            )
 
-    def _set_provider(
-        self,
-        mapping: Mapping[Union[Type[T], object], Union[T, Callable]],
-        clobber: bool,
-    ) -> Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]]:
+        reg = self._providers if providers else self._processors
 
-        _before: Dict[Tuple[Type, bool], Union[_NullSentinel, Callable[[], T]]] = {}
-        _non_optional = {}
-        _optionals = {}
+        def _dispose() -> None:
+            for p in _p:
+                with contextlib.suppress(ValueError):
+                    reg.remove(p)
+            with contextlib.suppress(AttributeError):
+                if providers:
+                    del self._cached_provider_map
+                else:
+                    del self._cached_processor_map
 
+        if _p:
+            reg.extend(_p)
+            with contextlib.suppress(AttributeError):
+                if providers:
+                    del self._cached_provider_map
+                else:
+                    del self._cached_processor_map
 
-        for type_, obj in mapping.items():
-            origin, type_optional = _check_optional(type_)
-
-            if type_optional:  # sourcery skip: assign-if-exp
-                _map: Dict[Type[T], Callable] = self.opt_providers
-            else:
-                _map = self.providers
-            if origin in _map and not clobber:
-                raise ValueError(
-                    f"Type {type_} already has a provider and 'clobber' is False"
-                )
-            # if provider is not a function, create a function that returns it
-            caller: Callable = _validate_provider(obj)
-
-            # get current value
-            _before[(origin, type_optional)] = _map.get(origin, self._NULL)
-
-            if type_optional:
-                _optionals[origin] = caller
-            else:
-                _non_optional[origin] = caller
-
-        self.providers.update(_non_optional)
-        self.opt_providers.update(_optionals)
-
-        return _before
+        return _dispose
 
 
-Store._instances[_GLOBAL] = Store(_GLOBAL)
+Store._instances[_GLOBAL] = GLOBAL_STORE = Store(_GLOBAL)
 
 
 def _validate_provider(obj: Union[T, Callable[[], T]]) -> Callable[[], T]:

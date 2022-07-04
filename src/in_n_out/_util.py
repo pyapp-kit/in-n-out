@@ -15,7 +15,7 @@ def _check_optional(type_: Any) -> Tuple[Type, bool]:
     optional = False
     if get_origin(type_) is Union:
         args = get_args(type_)
-        if args and len(args) == 2 and type(None) in args:
-            type_ = next(a for a in args if a is not type(None))  # noqa
+        if args and type(None) in args:
             optional = True
+            type_ = Union[tuple(x for x in args if x is not type(None))]
     return type_, optional

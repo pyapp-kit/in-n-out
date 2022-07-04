@@ -94,7 +94,7 @@ def test_optional_processors():
     assert clear_processor(str) is processes_string
 
     # all clear
-    assert not Store.get_store(_GLOBAL).processors
+    assert not Store.get_store(_GLOBAL)._processors
 
 
 def test_union_processors():

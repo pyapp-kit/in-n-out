@@ -57,9 +57,9 @@ class set_processors:
     def __exit__(self, *_: Any) -> None:
         for origin, val in self._before.items():
             if val is self._store._NULL:
-                del self._store.processors[origin]
+                del self._store._processors[origin]
             else:
-                self._store.processors[origin] = cast(Callable, val)
+                self._store._processors[origin] = cast(Callable, val)
 
 
 def get_processor(
