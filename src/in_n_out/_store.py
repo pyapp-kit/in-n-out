@@ -27,25 +27,6 @@ from typing import (
 from ._type_resolution import _resolve_sig_or_inform, resolve_type_hints
 from ._util import _split_union, issubclassable
 
-T = TypeVar("T")
-Provider = Callable[[], Any]
-ProviderVar = TypeVar("ProviderVar", bound=Provider)
-
-Processor = Callable[[Any], Any]
-ProcessorVar = TypeVar("ProcessorVar", bound=Processor)
-
-Disposer = Callable[[], None]
-
-_GLOBAL = "global"
-
-Namespace = Mapping[str, object]
-
-HintArg = object
-Weight = float
-ProviderProcessorIterable = Iterable[
-    Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
-]
-
 if TYPE_CHECKING:
     from inspect import Signature
 
@@ -57,6 +38,23 @@ if TYPE_CHECKING:
     R = TypeVar("R")
 
 
+T = TypeVar("T")
+Provider = Callable[[], Any]
+ProviderVar = TypeVar("ProviderVar", bound=Provider)
+Processor = Callable[[Any], Any]
+ProcessorVar = TypeVar("ProcessorVar", bound=Processor)
+Disposer = Callable[[], None]
+Namespace = Mapping[str, object]
+HintArg = object
+Weight = float
+ProviderProcessorIterable = Iterable[
+    Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
+]
+
+
+_GLOBAL = "global"
+
+
 class _NullSentinel:
     ...
 
@@ -66,6 +64,12 @@ class _RegisteredCallback(NamedTuple):
     callback: Callable
     hint_optional: bool
     weight: float
+    subclassable: bool
+
+
+class _CachedMap(NamedTuple):
+    all: Dict[object, List[Union[Processor, Provider]]]
+    subclassable: Dict[type, List[Union[Processor, Provider]]]
 
 
 class Store:
@@ -670,44 +674,60 @@ class Store:
     # -----------------
 
     @cached_property
-    def _cached_provider_map(self) -> Dict[type, List[Provider]]:
+    def _cached_provider_map(self) -> _CachedMap:
         return self._build_map(self._providers)
 
     @cached_property
-    def _cached_processor_map(self) -> Dict[type, List[Processor]]:
+    def _cached_processor_map(self) -> _CachedMap:
         return self._build_map(self._processors)
 
-    def _build_map(
-        self, registry: List[_RegisteredCallback]
-    ) -> Dict[type, List[Callable]]:
+    def _build_map(self, registry: List[_RegisteredCallback]) -> _CachedMap:
         """Build a map of type hints to callbacks.
 
         This is the sorted and cached version of the map that will be used to resolve
-        a provider or processor.
+        a provider or processor.  It returns a tuple of two maps.  The first is a map
+        of *all* provider/processor type hints, regardless of whether they can be used
+        with `is_subclass`.  The second is a map of only "issubclassable" type hints.
         """
-        out: Dict[type, List[_RegisteredCallback]] = {}
+        all_: Dict[object, List[_RegisteredCallback]] = {}
+        subclassable: Dict[type, List[_RegisteredCallback]] = {}
         for p in registry:
-            if p.origin not in out:
-                out[p.origin] = []
-            out[p.origin].append(p)
+            if p.origin not in all_:
+                all_[p.origin] = []
+            all_[p.origin].append(p)
+            if p.subclassable:
+                if p.origin not in subclassable:
+                    subclassable[p.origin] = []
+                subclassable[p.origin].append(p)
 
-        return {
+        all_out = {
             hint: [v.callback for v in sorted(val, key=self._sort_key, reverse=True)]
-            for hint, val in out.items()
+            for hint, val in all_.items()
         }
+        subclassable_out = {
+            hint: [v.callback for v in sorted(val, key=self._sort_key, reverse=True)]
+            for hint, val in subclassable.items()
+        }
+        return _CachedMap(all_out, subclassable_out)
 
     def _iter_type_map(
-        self, hint: Union[object, Type[T]], callback_map: Mapping[type, List[Callable]]
+        self, hint: Union[object, Type[T]], callback_map: _CachedMap
     ) -> Iterable[Callable]:
+        _all_types = callback_map.all
+        _subclassable_types = callback_map.subclassable
+
         for origin in _split_union(hint)[0]:
-            if origin in callback_map:
-                yield from callback_map[origin]
+            if origin in _all_types:
+                yield from _all_types[origin]
                 return
 
-            for _hint, processor in callback_map.items():
-                if issubclass(origin, _hint):
-                    yield from processor
-                    return
+            if isinstance(origin, type):
+                # we need origin to be a type to be able to check if it's a
+                # subclass of other types
+                for _hint, processor in _subclassable_types.items():
+                    if issubclass(origin, _hint):
+                        yield from processor
+                        return
 
     def _sort_key(self, p: _RegisteredCallback) -> float:
         """How we sort registered callbacks within the same type hint."""
@@ -732,18 +752,25 @@ class Store:
         for type_, callback, *weight in callbacks:
             origins, is_optional = _split_union(type_)
             for origin in origins:
+                subclassable: bool = True
                 if not issubclassable(origin):
-                    regname = "provider" if providers else "processor"
-                    raise TypeError(
-                        f"{type_!r} cannot be used as a {regname} hint, since it "
-                        "cannot be used as the second argument of `issubclass`"
-                    )
+                    subclassable = False
+                    try:
+                        hash(origin)
+                    except TypeError:
+                        regname = "provider" if providers else "processor"
+                        raise TypeError(
+                            f"{origin!r} cannot be used as a {regname} hint, since it "
+                            "is not hashable and cannot be passed as the second "
+                            "argument to `issubclass`"
+                        ) from None
                 _p.append(
                     _RegisteredCallback(
                         origin=origin,
                         callback=check(callback),
                         hint_optional=is_optional,
                         weight=weight[0] if weight else 0,
+                        subclassable=subclassable,
                     )
                 )
 
