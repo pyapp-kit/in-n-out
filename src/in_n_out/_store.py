@@ -22,7 +22,7 @@ from typing import (
 )
 
 from ._type_resolution import resolve_type_hints
-from ._util import _check_optional, issubclassable
+from ._util import _split_union, issubclassable
 
 T = TypeVar("T")
 Provider = Callable[[], Any]
@@ -513,14 +513,15 @@ class Store:
     def _iter_type_map(
         self, hint: Union[object, Type[T]], callback_map: Mapping[type, List[Callable]]
     ) -> Iterable[Callable]:
-        origin = _check_optional(hint)[0]
-        if origin in callback_map:
-            yield from callback_map[origin]
-            return
+        for origin in _split_union(hint)[0]:
+            if origin in callback_map:
+                yield from callback_map[origin]
+                return
 
-        for _hint, processor in callback_map.items():
-            if issubclass(origin, _hint):
-                yield from processor
+            for _hint, processor in callback_map.items():
+                if issubclass(origin, _hint):
+                    yield from processor
+                    return
 
     def _sort_key(self, p: _RegisteredCallback) -> float:
         """How we sort registered callbacks within the same type hint."""
@@ -543,21 +544,22 @@ class Store:
             check = _validate_processor
 
         for type_, callback, *weight in callbacks:
-            origin, is_optional = _check_optional(type_)
-            if not issubclassable(origin):
-                regname = "provider" if providers else "processor"
-                raise TypeError(
-                    f"{type_!r} cannot be used as a {regname} hint, since it "
-                    "cannot be used as the second argument of `issubclass`"
+            origins, is_optional = _split_union(type_)
+            for origin in origins:
+                if not issubclassable(origin):
+                    regname = "provider" if providers else "processor"
+                    raise TypeError(
+                        f"{type_!r} cannot be used as a {regname} hint, since it "
+                        "cannot be used as the second argument of `issubclass`"
+                    )
+                _p.append(
+                    _RegisteredCallback(
+                        origin=origin,
+                        callback=check(callback),
+                        hint_optional=is_optional,
+                        weight=weight[0] if weight else 0,
+                    )
                 )
-            _p.append(
-                _RegisteredCallback(
-                    origin=origin,
-                    callback=check(callback),
-                    hint_optional=is_optional,
-                    weight=weight[0] if weight else 0,
-                )
-            )
 
         reg = self._providers if providers else self._processors
 
