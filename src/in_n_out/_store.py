@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import contextlib
 import warnings
-from functools import cached_property
-from inspect import CO_VARARGS
+from functools import cached_property, wraps
+from inspect import CO_VARARGS, isgeneratorfunction
 from types import CodeType
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -21,7 +24,7 @@ from typing import (
     overload,
 )
 
-from ._type_resolution import resolve_type_hints
+from ._type_resolution import _resolve_sig_or_inform, resolve_type_hints
 from ._util import _split_union, issubclassable
 
 T = TypeVar("T")
@@ -39,6 +42,16 @@ ProviderProcessorIterable = Iterable[
     Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
 ]
 
+if TYPE_CHECKING:
+    from inspect import Signature
+
+    from typing_extensions import ParamSpec
+
+    from ._type_resolution import RaiseWarnReturnIgnore
+
+    P = ParamSpec("P")
+    R = TypeVar("R")
+
 
 class _NullSentinel:
     ...
@@ -55,10 +68,10 @@ class Store:
     """A Store is a collection of providers and processors."""
 
     _NULL = _NullSentinel()
-    _instances: Dict[str, "Store"] = {}
+    _instances: Dict[str, Store] = {}
 
     @classmethod
-    def create(cls, name: str) -> "Store":
+    def create(cls, name: str) -> Store:
         """Create a new Store instance with the given `name`.
 
         This name can be used to refer to the Store in other functions.
@@ -87,7 +100,7 @@ class Store:
         return cls._instances[name]
 
     @classmethod
-    def get_store(cls, name: Optional[str] = None) -> "Store":
+    def get_store(cls, name: Optional[str] = None) -> Store:
         """Get a Store instance with the given `name`.
 
         Parameters
@@ -125,6 +138,8 @@ class Store:
         self._providers: List[_RegisteredCallback] = []
         self._processors: List[_RegisteredCallback] = []
         self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
+        self.on_unresolved_required_args: RaiseWarnReturnIgnore = "raise"
+        self.on_unannotated_required_args: RaiseWarnReturnIgnore = "warn"
 
     @property
     def name(self) -> str:
@@ -480,6 +495,171 @@ class Store:
             return func
 
         return _deco(func) if func is not None else _deco
+
+    # ------------------------------------------------------------------------------
+
+    @overload
+    def inject_dependencies(
+        self,
+        func: Callable[P, R],
+        *,
+        localns: Optional[dict] = None,
+        on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+    ) -> Callable[P, R]:
+        ...
+
+    @overload
+    def inject_dependencies(
+        self,
+        func: Literal[None] = None,
+        *,
+        localns: Optional[dict] = None,
+        on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+        ...
+
+    def inject_dependencies(
+        self,
+        func: Optional[Callable[P, R]] = None,
+        *,
+        localns: Optional[dict] = None,
+        on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+    ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
+        """Decorator returns func that can access/process objects based on type hints.
+
+        This is form of dependency injection, and result processing.  It does 2 things:
+
+        1. If `func` includes a parameter that has a type with a registered provider
+        (e.g. `Viewer`, or `Layer`), then this decorator will return a new version of
+        the input function that can be called *without* that particular parameter.
+
+        2. If `func` has a return type with a registered processor (e.g. `ImageData`),
+        then this decorator will return a new version of the input function that, when
+        called, will have the result automatically processed by the current processor
+        for that type (e.g. in the case of `ImageData`, it will be added to the viewer.)
+
+        Parameters
+        ----------
+        func : Callable[P, R]
+            a function with type hints
+        localns : Optional[dict]
+            Optional local namespace for name resolution, by default None
+        on_unresolved_required_args : RaiseWarnReturnIgnore
+            What to do when a required parameter (one without a default) is encountered
+            with an unresolvable type annotation.
+            Must be one of the following (by default 'raise'):
+
+                - 'raise': immediately raise an exception
+                - 'warn': warn and return the original function
+                - 'return': return the original function without warning
+                - 'ignore': currently an alias for `return`, but will be used in
+                the future to allow the decorator to proceed.
+
+        on_unannotated_required_args : RaiseWarnReturnIgnore
+            What to do when a required parameter (one without a default) is encountered
+            with an *no* type annotation. These functions are likely to fail when called
+            later if the required parameter is not provided.
+            Must be one of the following (by default 'warn'):
+
+                - 'raise': immediately raise an exception
+                - 'warn': warn, but continue decorating
+                - 'return': immediately return the original function without warning
+                - 'ignore': continue decorating without warning.
+
+        Returns
+        -------
+        Callable
+            A function with dependencies injected
+        """
+        on_unres = on_unresolved_required_args or self.on_unresolved_required_args
+        on_unann = on_unannotated_required_args or self.on_unannotated_required_args
+
+        # inner decorator, allows for optional decorator arguments
+        def _inner(func: Callable[P, R]) -> Callable[P, R]:
+            # if the function takes no arguments and has no return annotation
+            # there's nothing to be done
+            code: Optional[CodeType] = getattr(func, "__code__", None)
+            if (code and not code.co_argcount) and "return" not in getattr(
+                func, "__annotations__", {}
+            ):
+                return func
+
+            # get a signature object with all type annotations resolved
+            # this may result in a NameError if a required argument is unresolveable.
+            # There may also be unannotated required arguments, which will likely fail
+            # when the function is called later. We break this out into a seperate
+            # function to handle notifying the user on these cases.
+            sig = _resolve_sig_or_inform(
+                func,
+                localns={**self.namespace, **(localns or {})},
+                on_unresolved_required_args=on_unres,
+                on_unannotated_required_args=on_unann,
+            )
+            if sig is None:  # something went wrong, and the user was notified.
+                return func
+            process_result = sig.return_annotation is not sig.empty
+
+            # get provider functions for each required parameter
+            @wraps(func)
+            def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
+                # sourcery skip: use-named-expression
+                # we're actually calling the "injected function" now
+
+                _sig = cast("Signature", sig)
+                # first, get and call the provider functions for each parameter type:
+                _kwargs: Dict[str, Any] = {}
+                for param in _sig.parameters.values():
+                    provided = self.provide(param.annotation)
+                    if provided is not None:
+                        _kwargs[param.name] = provided
+
+                # use bind_partial to allow the caller to still provide their own args
+                # if desired. (i.e. the injected deps are only used if not provided)
+                bound = _sig.bind_partial(*args, **kwargs)
+                bound.apply_defaults()
+                _kwargs.update(**bound.arguments)
+
+                try:  # call the function with injected values
+                    result = func(**_kwargs)
+                except TypeError as e:
+                    # likely a required argument is still missing.
+                    raise TypeError(
+                        f"After injecting dependencies for arguments {set(_kwargs)}, "
+                        f"{e}"
+                    ) from e
+
+                if result is not None and process_result:
+                    # TODO: pass on keywords
+                    self.process(_sig.return_annotation, result)
+
+                return result
+
+            out = _exec
+
+            # if it came in as a generatorfunction, it needs to go out as one.
+            if isgeneratorfunction(func):
+
+                @wraps(func)
+                def _gexec(*args: P.args, **kwargs: P.kwargs) -> R:  # type: ignore
+                    yield from _exec(*args, **kwargs)  # type: ignore
+
+                out = _gexec
+
+            # update some metadata on the decorated function.
+            out.__signature__ = sig  # type: ignore [attr-defined]
+            out.__annotations__ = {
+                **{p.name: p.annotation for p in sig.parameters.values()},
+                "return": sig.return_annotation,
+            }
+            out.__doc__ = (
+                out.__doc__ or ""
+            ) + "\n\n*This function will inject dependencies when called.*"
+            return out
+
+        return _inner(func) if func is not None else _inner
 
     # -----------------
 
