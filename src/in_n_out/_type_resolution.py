@@ -6,7 +6,14 @@ import typing
 import warnings
 from functools import lru_cache, partial
 from inspect import Signature
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type
+
+try:
+    from toolz import curry
+
+    PARTIAL_TYPES: Tuple[Type, ...] = (partial, curry)
+except ImportError:  # pragma: no cover
+    PARTIAL_TYPES = (partial,)
 
 if TYPE_CHECKING:
     from typing import Literal, _get_type_hints_obj_allowed_types
@@ -22,7 +29,7 @@ def _typing_names() -> Dict[str, Any]:
 
 
 def _unwrap_partial(func: Any) -> Any:
-    while isinstance(func, partial):
+    while isinstance(func, PARTIAL_TYPES):
         func = func.func
     return func
 
