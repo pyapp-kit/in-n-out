@@ -1,5 +1,5 @@
-import contextlib
-from typing import Any, List, Set, Tuple, Type, Union, get_origin
+import types
+from typing import Any, List, Set, Tuple, Type, Union, cast, get_origin
 
 try:
     import cython
@@ -13,11 +13,9 @@ else:  # pragma: no cover
 
 
 UNION_TYPES: Set[Any] = {Union}
-
-with contextlib.suppress(ImportError):
-    from types import UnionType
-
-    UNION_TYPES.add(UnionType)
+if hasattr(types, "UnionType"):
+    # doing it this way to deal with python-version specific linting issues
+    UNION_TYPES.add(cast(Any, getattr(types, "UnionType")))  # noqa
 
 
 def _is_union(type_: Any) -> bool:
