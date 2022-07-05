@@ -19,3 +19,12 @@ def _check_optional(type_: Any) -> Tuple[Type, bool]:
             optional = True
             type_ = Union[tuple(x for x in args if x is not type(None))]  # noqa
     return type_, optional
+
+
+def issubclassable(obj: Any) -> bool:
+    """Return True if `obj` can be used as the second argument in issubclass."""
+    try:
+        issubclass(type, obj)
+        return True
+    except TypeError:
+        return False

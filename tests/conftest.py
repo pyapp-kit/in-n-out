@@ -11,3 +11,9 @@ def test_store() -> Iterator[Store]:
         yield Store.create("test")
     finally:
         Store.destroy("test")
+
+
+@pytest.fixture(autouse=True)
+def clear_global_store():
+    yield
+    Store.get_store().clear()

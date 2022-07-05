@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Union
+from typing import Generic, List, Optional, Sequence, TypeVar, Union
 from unittest.mock import Mock
 
 import pytest
@@ -126,3 +126,32 @@ def test_unlikely_processor():
 
     with pytest.raises(ValueError, match="Processors must be callable"):
         set_processors({int: 1})
+
+
+def test_no_generics():
+    T = TypeVar("T")
+
+    class G(Generic[T]):
+        ...
+
+    # parametrized generics not yet supported
+    with pytest.raises(TypeError, match="cannot be used as a processor"):
+
+        @processor
+        def _(x: List[int]):
+            ...
+
+    with pytest.raises(TypeError, match="cannot be used as a processor"):
+
+        @processor
+        def _(x: G[int]):
+            ...
+
+    # but ok without params
+    @processor
+    def _(x: List):
+        ...
+
+    @processor
+    def _(x: G):
+        ...

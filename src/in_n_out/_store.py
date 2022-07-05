@@ -22,7 +22,7 @@ from typing import (
 )
 
 from ._type_resolution import resolve_type_hints
-from ._util import _check_optional
+from ._util import _check_optional, issubclassable
 
 T = TypeVar("T")
 Provider = Callable[[], Any]
@@ -370,7 +370,6 @@ class Store:
         Iterable[Callable[[], Optional[T]]]
             Iterable of processor callbacks.
         """
-        print("_cached_processor_map", self._cached_processor_map)
         return self._iter_type_map(hint, self._cached_processor_map)
 
     def process(
@@ -398,10 +397,8 @@ class Store:
             If `True`, and a processor raises an exception, it will be raised
             and the remaining processors will not be invoked.
         """
-        print("call iter proc")
         for processor in self.iter_processors(hint):  # type: ignore
             try:
-                print("try processor", processor)
                 processor(result)
             except Exception as e:  # pragma: no cover
                 if raise_exception:
@@ -514,14 +511,14 @@ class Store:
         }
 
     def _iter_type_map(
-        self, hint: Union[object, Type[T]], map: Mapping[type, List[Callable]]
+        self, hint: Union[object, Type[T]], callback_map: Mapping[type, List[Callable]]
     ) -> Iterable[Callable]:
         origin = _check_optional(hint)[0]
-        if origin in map:
-            yield from map[origin]
+        if origin in callback_map:
+            yield from callback_map[origin]
             return
 
-        for _hint, processor in map.items():
+        for _hint, processor in callback_map.items():
             if issubclass(origin, _hint):
                 yield from processor
 
@@ -547,6 +544,12 @@ class Store:
 
         for type_, callback, *weight in callbacks:
             origin, is_optional = _check_optional(type_)
+            if not issubclassable(origin):
+                regname = "provider" if providers else "processor"
+                raise TypeError(
+                    f"{type_!r} cannot be used as a {regname} hint, since it "
+                    "cannot be used as the second argument of `issubclass`"
+                )
             _p.append(
                 _RegisteredCallback(
                     origin=origin,
