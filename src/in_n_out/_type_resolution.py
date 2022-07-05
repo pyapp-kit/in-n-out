@@ -3,12 +3,15 @@ from __future__ import annotations
 import sys
 import types
 import typing
+import warnings
 from functools import lru_cache
 from inspect import Signature
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 if TYPE_CHECKING:
-    from typing import _get_type_hints_obj_allowed_types
+    from typing import Literal, _get_type_hints_obj_allowed_types
+
+    RaiseWarnReturnIgnore = Literal["raise", "warn", "return", "ignore"]
 
 PY39_OR_GREATER = sys.version_info >= (3, 9)
 
@@ -188,3 +191,61 @@ def _resolve_mandatory_params(
             if not exclude_unresolved_optionals:
                 hints["return"] = sig.return_annotation
     return hints
+
+
+def _resolve_sig_or_inform(
+    func: Callable,
+    localns: Optional[dict],
+    on_unresolved_required_args: RaiseWarnReturnIgnore,
+    on_unannotated_required_args: RaiseWarnReturnIgnore,
+) -> Optional[Signature]:
+    """Helper function for user warnings/errors during inject_dependencies.
+
+    all parameters are described above in inject_dependencies
+    """
+    try:
+        sig = type_resolved_signature(
+            func, localns=localns, raise_unresolved_optional_args=False
+        )
+    except NameError as e:
+        errmsg = str(e)
+        if on_unresolved_required_args == "raise":
+            msg = (
+                f"{errmsg}. To simply return the original function, pass `on_un"
+                'resolved_required_args="return"`. To emit a warning, pass "warn".'
+            )
+            raise NameError(msg) from e
+        if on_unresolved_required_args == "warn":
+            msg = (
+                f"{errmsg}. To suppress this warning and simply return the original "
+                'function, pass `on_unresolved_required_args="return"`.'
+            )
+
+            warnings.warn(msg, UserWarning, stacklevel=2)
+        return None
+
+    for param in sig.parameters.values():
+        if param.default is param.empty and param.annotation is param.empty:
+            fname = (getattr(func, "__name__", ""),)
+            name = param.name
+            base = (
+                f"Injecting dependencies on function {fname!r} with a required, "
+                f"unannotated parameter {name!r}. This will fail later unless that "
+                "parameter is provided at call-time.",
+            )
+            if on_unannotated_required_args == "raise":
+                msg = (
+                    f'{base} To allow this, pass `on_unannotated_required_args="ignore"'
+                    '`. To emit a warning, pass "warn".'
+                )
+                raise TypeError(msg)
+            elif on_unannotated_required_args == "warn":
+                msg = (
+                    f'{base} To allow this, pass `on_unannotated_required_args="ignore"'
+                    '`. To raise an exception, pass "raise".'
+                )
+                warnings.warn(msg, UserWarning, stacklevel=2)
+            elif on_unannotated_required_args == "return":
+                return None
+
+    return sig
