@@ -1,0 +1,20 @@
+site_name: My Docs
+
+watch:
+  - src/in_n_out
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.emoji
+  - admonition
+
+theme:
+  name: material
+  icon:
+    logo: material/arrow-left-right-bold-outline
+  features:
+    - content.code.annotate
