@@ -73,3 +73,28 @@ def test_type_resolved_signature():
 
     sig = type_resolved_signature(requires_unknown, localns={"Unknown": int})
     assert sig.parameters["param"].annotation == int
+
+
+def test_partial_resolution() -> None:
+    from functools import partial
+
+    def func(x: int, y: str, z: list):
+        ...
+
+    pf = partial(func, 1)
+    ppf = partial(pf, z=["hi"])
+
+    assert resolve_type_hints(ppf) == {"x": int, "y": str, "z": list}
+
+
+def test_curry_resolution() -> None:
+    toolz = pytest.importorskip("toolz")
+
+    @toolz.curry
+    def func2(x: int, y: str, z: list):
+        ...
+
+    pf = func2(x=1)
+    ppf = pf(z=["hi"])
+
+    assert resolve_type_hints(ppf) == {"x": int, "y": str, "z": list}

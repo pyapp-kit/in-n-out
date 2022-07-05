@@ -4,9 +4,16 @@ import sys
 import types
 import typing
 import warnings
-from functools import lru_cache
+from functools import lru_cache, partial
 from inspect import Signature
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type
+
+try:
+    from toolz import curry
+
+    PARTIAL_TYPES: Tuple[Type, ...] = (partial, curry)
+except ImportError:  # pragma: no cover
+    PARTIAL_TYPES = (partial,)
 
 if TYPE_CHECKING:
     from typing import Literal, _get_type_hints_obj_allowed_types
@@ -19,6 +26,12 @@ PY39_OR_GREATER = sys.version_info >= (3, 9)
 @lru_cache(maxsize=1)
 def _typing_names() -> Dict[str, Any]:
     return {**typing.__dict__, **types.__dict__}  # noqa: TYP006
+
+
+def _unwrap_partial(func: Any) -> Any:
+    while isinstance(func, PARTIAL_TYPES):
+        func = func.func
+    return func
 
 
 def resolve_type_hints(
@@ -57,7 +70,7 @@ def resolve_type_hints(
     kwargs: Dict[str, Any] = dict(globalns=globalns, localns=_localns)
     if PY39_OR_GREATER:
         kwargs["include_extras"] = include_extras
-    return typing.get_type_hints(obj, **kwargs)
+    return typing.get_type_hints(_unwrap_partial(obj), **kwargs)
 
 
 def resolve_single_type_hints(
