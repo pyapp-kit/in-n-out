@@ -21,8 +21,6 @@ from typing import (
     overload,
 )
 
-from beartype.math import TypeHint
-
 from ._type_resolution import resolve_type_hints
 from ._util import _check_optional
 
@@ -47,7 +45,7 @@ class _NullSentinel:
 
 
 class _RegisteredCallback(NamedTuple):
-    hint: TypeHint
+    origin: type
     callback: Callable
     hint_optional: bool
     weight: float
@@ -217,10 +215,7 @@ class Store:
         Iterable[Callable[[], Optional[T]]]
             Iterable of provider callbacks.
         """
-        th = TypeHint(_check_optional(hint)[0])
-        for hint, providers in self._cached_provider_map.items():
-            if th.is_subtype(hint):
-                yield from providers
+        return self._iter_type_map(hint, self._cached_provider_map)
 
     def provide(self, hint: Union[object, Type[T]]) -> Optional[T]:
         """Provide an instance of `hint`.
@@ -375,10 +370,8 @@ class Store:
         Iterable[Callable[[], Optional[T]]]
             Iterable of processor callbacks.
         """
-        th = TypeHint(_check_optional(hint)[0])
-        for _hint, processor in self._cached_processor_map.items():
-            if th.is_subtype(_hint):
-                yield from processor
+        print("_cached_processor_map", self._cached_processor_map)
+        return self._iter_type_map(hint, self._cached_processor_map)
 
     def process(
         self,
@@ -405,8 +398,10 @@ class Store:
             If `True`, and a processor raises an exception, it will be raised
             and the remaining processors will not be invoked.
         """
+        print("call iter proc")
         for processor in self.iter_processors(hint):  # type: ignore
             try:
+                print("try processor", processor)
                 processor(result)
             except Exception as e:  # pragma: no cover
                 if raise_exception:
@@ -492,31 +487,43 @@ class Store:
     # -----------------
 
     @cached_property
-    def _cached_provider_map(self) -> Dict[TypeHint, List[Provider]]:
+    def _cached_provider_map(self) -> Dict[type, List[Provider]]:
         return self._build_map(self._providers)
 
     @cached_property
-    def _cached_processor_map(self) -> Dict[TypeHint, List[Processor]]:
+    def _cached_processor_map(self) -> Dict[type, List[Processor]]:
         return self._build_map(self._processors)
 
     def _build_map(
         self, registry: List[_RegisteredCallback]
-    ) -> Dict[TypeHint, List[Callable]]:
+    ) -> Dict[type, List[Callable]]:
         """Build a map of type hints to callbacks.
 
         This is the sorted and cached version of the map that will be used to resolve
         a provider or processor.
         """
-        out: Dict[TypeHint, List[_RegisteredCallback]] = {}
+        out: Dict[type, List[_RegisteredCallback]] = {}
         for p in registry:
-            if p.hint not in out:
-                out[p.hint] = []
-            out[p.hint].append(p)
+            if p.origin not in out:
+                out[p.origin] = []
+            out[p.origin].append(p)
 
         return {
             hint: [v.callback for v in sorted(val, key=self._sort_key, reverse=True)]
             for hint, val in out.items()
         }
+
+    def _iter_type_map(
+        self, hint: Union[object, Type[T]], map: Mapping[type, List[Callable]]
+    ) -> Iterable[Callable]:
+        origin = _check_optional(hint)[0]
+        if origin in map:
+            yield from map[origin]
+            return
+
+        for _hint, processor in map.items():
+            if issubclass(origin, _hint):
+                yield from processor
 
     def _sort_key(self, p: _RegisteredCallback) -> float:
         """How we sort registered callbacks within the same type hint."""
@@ -542,7 +549,7 @@ class Store:
             origin, is_optional = _check_optional(type_)
             _p.append(
                 _RegisteredCallback(
-                    hint=TypeHint(origin),
+                    origin=origin,
                     callback=check(callback),
                     hint_optional=is_optional,
                     weight=weight[0] if weight else 0,

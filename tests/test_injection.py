@@ -39,10 +39,12 @@ def test_set_processor():
     mock = Mock()
 
     def process_int(x: int) -> None:
+        print("HI")
         mock(x)
 
     with set_processors({int: process_int}):
         assert f2(3) == 3
+
     mock.assert_called_once_with(3)
 
 

@@ -20,9 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dynamic = ["version"]
-dependencies = [
-    'beartype @ git+https://github.com/tlambert03/beartype.git@math-mod'
-]
+dependencies = []
 
 # extras
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies

@@ -24,12 +24,16 @@ def test_set_processors(test_store: Store, type, process, ask_type):
     """Test that we can set processor as function or constant, and get it back."""
     assert not list(test_store.iter_processors(ask_type))
     with set_processors({type: process}, store=test_store):
+        assert len(test_store._processors) == 1
+        assert list(test_store.iter_processors(type))
+        assert list(test_store.iter_processors(ask_type))
         MOCK.reset_mock()
         test_store.process(ask_type, 1)
         MOCK.assert_called_once()
     assert not list(
         test_store.iter_processors(ask_type)
     )  # make sure context manager cleaned up
+    assert len(test_store._processors) == 0
 
 
 def test_set_processors_cleanup(test_store: Store):
