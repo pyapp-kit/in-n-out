@@ -73,3 +73,16 @@ def test_type_resolved_signature():
 
     sig = type_resolved_signature(requires_unknown, localns={"Unknown": int})
     assert sig.parameters["param"].annotation == int
+
+
+def test_partial_resolution() -> None:
+    from functools import partial
+
+    def func(x: int, y: str, z: list) -> None:
+        ...
+
+    pf = partial(func, 1)
+    ppf = partial(pf, z=["hi"])
+    hints = resolve_type_hints(ppf)
+
+    assert hints == {"x": int, "y": str, "z": list}
