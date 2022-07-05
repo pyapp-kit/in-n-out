@@ -29,7 +29,11 @@ from ._util import _split_union, issubclassable
 
 T = TypeVar("T")
 Provider = Callable[[], Any]
+ProviderVar = TypeVar("ProviderVar", bound=Provider)
+
 Processor = Callable[[Any], Any]
+ProcessorVar = TypeVar("ProcessorVar", bound=Processor)
+
 Disposer = Callable[[], None]
 
 _GLOBAL = "global"
@@ -258,11 +262,11 @@ class Store:
     @overload
     def provider(
         self,
-        func: Provider,
+        func: ProviderVar,
         *,
         weight: float = 0,
         for_type: Optional[object] = None,
-    ) -> Provider:
+    ) -> ProviderVar:
         ...
 
     @overload
@@ -272,16 +276,16 @@ class Store:
         *,
         weight: float = 0,
         for_type: Optional[object] = None,
-    ) -> Callable[[Provider], Provider]:
+    ) -> Callable[[ProviderVar], ProviderVar]:
         ...
 
     def provider(
         self,
-        func: Optional[Provider] = None,
+        func: Optional[ProviderVar] = None,
         *,
         weight: float = 0,
         for_type: Optional[object] = None,
-    ) -> Union[Callable[[Provider], Provider], Provider]:
+    ) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
         """Decorate `func` as a provider of its first parameter type.
 
         Note, If func returns `Optional[Type]`, it will be registered as a provider
@@ -311,7 +315,7 @@ class Store:
         ...     return 42
         """
 
-        def _deco(func: Provider, hint: Optional[object] = for_type) -> Provider:
+        def _deco(func: ProviderVar, hint: Optional[object] = for_type) -> ProviderVar:
             if hint is None:
                 hint = resolve_type_hints(func, localns=self.namespace).get("return")
             if hint is None:
@@ -427,11 +431,11 @@ class Store:
     @overload
     def processor(
         self,
-        func: Processor,
+        func: ProcessorVar,
         *,
         weight: float = 0,
         for_type: Optional[object] = None,
-    ) -> Processor:
+    ) -> ProcessorVar:
         ...
 
     @overload
@@ -441,16 +445,16 @@ class Store:
         *,
         weight: float = 0,
         for_type: Optional[object] = None,
-    ) -> Callable[[Processor], Processor]:
+    ) -> Callable[[ProcessorVar], ProcessorVar]:
         ...
 
     def processor(
         self,
-        func: Optional[Processor] = None,
+        func: Optional[ProcessorVar] = None,
         *,
         weight: float = 0,
         for_type: Optional[object] = None,
-    ) -> Union[Callable[[Processor], Processor], Processor]:
+    ) -> Union[Callable[[ProcessorVar], ProcessorVar], ProcessorVar]:
         """Decorate `func` as a processor of its first parameter type.
 
         Parameters
@@ -479,7 +483,9 @@ class Store:
         ...     print("Processing int:", x)
         """
 
-        def _deco(func: Processor, hint: Optional[object] = for_type) -> Processor:
+        def _deco(
+            func: ProcessorVar, hint: Optional[object] = for_type
+        ) -> ProcessorVar:
             if hint is None:
                 hints = resolve_type_hints(func, localns=self.namespace)
                 hints.pop("return", None)
