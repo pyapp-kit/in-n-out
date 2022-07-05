@@ -3,9 +3,9 @@ from __future__ import annotations
 import warnings
 from functools import wraps
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, Union, cast, overload
+from types import CodeType
+from typing import TYPE_CHECKING, Any, Dict, Union, cast, overload
 
-from ._providers import get_provider
 from ._store import Store
 from ._type_resolution import type_resolved_signature
 
@@ -107,7 +107,8 @@ def inject_dependencies(
     def _inner(func: Callable[P, R]) -> Callable[P, R]:
         # if the function takes no arguments and has no return annotation
         # there's nothing to be done
-        if not func.__code__.co_argcount and "return" not in getattr(
+        code: Optional[CodeType] = getattr(func, "__code__", None)
+        if (code and not code.co_argcount) and "return" not in getattr(
             func, "__annotations__", {}
         ):
             return func
@@ -135,13 +136,15 @@ def inject_dependencies(
 
             _sig = cast("Signature", sig)
             # first, get and call the provider functions for each parameter type:
-            _kwargs = {}
+            _kwargs: Dict[str, Any] = {}
             for param in _sig.parameters.values():
-                provider: Optional[Callable] = get_provider(
-                    param.annotation, store=store
-                )
-                if provider:
-                    _kwargs[param.name] = provider()
+                # provider: Optional[Callable] = _store._get_provider(param.annotation)
+                # if provider:
+                #     _kwargs[param.name] = provider()
+                # provider: Optional[Callable] = _store._get_provider(param.annotation)
+                provided = _store.provide(param.annotation)
+                if provided is not None:
+                    _kwargs[param.name] = provided
 
             # use bind_partial to allow the caller to still provide their own arguments
             # if desired. (i.e. the injected deps are only used if not provided)
@@ -158,9 +161,8 @@ def inject_dependencies(
                 ) from e
 
             if result is not None and process_result:
-                processor = _store._get_processor(_sig.return_annotation)
-                if processor:
-                    processor(result)
+                # TODO: pass on keywords
+                _store.process(_sig.return_annotation, result)
 
             return result
 
