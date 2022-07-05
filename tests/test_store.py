@@ -1,4 +1,5 @@
 from typing import Optional
+from unittest.mock import Mock
 
 import pytest
 
@@ -78,3 +79,41 @@ def test_store_namespace(test_store: Store):
         return t
 
     assert isinstance(use_t2(), T)
+
+
+def test_weakrefs_to_bound_methods(test_store: Store):
+    import gc
+    import weakref
+
+    mock = Mock()
+
+    class T:
+        def func(self, foo: int) -> None:
+            mock(foo)
+
+        def func2(self) -> str:
+            return "hi"
+
+    t = T()
+    reft = weakref.ref(t)
+
+    test_store.register_processor(int, t.func)
+    test_store.process(int, 1)
+    mock.assert_called_once_with(1)
+    mock.reset_mock()
+
+    test_store.register_provider(str, t.func2)
+    assert test_store.provide(str) == "hi"
+
+    del t
+    gc.collect()
+    assert not gc.collect()
+
+    assert reft() is None
+    test_store.process(int, 1)
+    mock.assert_not_called()
+
+    assert test_store.provide(str) is None
+
+    assert not test_store._providers
+    assert not test_store._processors
