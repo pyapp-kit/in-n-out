@@ -4,7 +4,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import inject_dependencies, set_processors, set_providers
+from in_n_out import (
+    Store,
+    inject_dependencies,
+    process_output,
+    set_processors,
+    set_providers,
+)
 
 
 def test_injection():
@@ -14,6 +20,29 @@ def test_injection():
 
     with set_providers({int: lambda: 1, str: lambda: "hi"}):
         assert f() == (1, "hi")
+
+
+@pytest.mark.parametrize("order", ["together", "inject_first", "inject_last"])
+def test_inject_deps_and_providers(order):
+    mock = Mock()
+    mock2 = Mock()
+
+    def f(i: int) -> str:
+        mock(i)
+        return str(i)
+
+    if order == "together":
+        f = inject_dependencies(f, process_output=True)
+    elif order == "inject_first":
+        f = process_output(inject_dependencies(f))
+    elif order == "inject_last":
+        f = inject_dependencies(process_output(f))
+
+    with set_providers({int: lambda: 1}):
+        with set_processors({str: mock2}):
+            assert f() == "1"
+            mock.assert_called_once_with(1)
+            mock2.assert_called_once_with("1")
 
 
 def test_injection_missing():
@@ -30,7 +59,7 @@ def test_injection_missing():
 
 
 def test_set_processor():
-    @inject_dependencies
+    @process_output
     def f2(x: int) -> int:
         return x
 
@@ -39,7 +68,6 @@ def test_set_processor():
     mock = Mock()
 
     def process_int(x: int) -> None:
-        print("HI")
         mock(x)
 
     with set_processors({int: process_int}):
@@ -131,8 +159,8 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
             assert out_func is not in_func
 
 
-def test_processors_not_passed_none():
-    @inject_dependencies
+def test_processors_not_passed_none(test_store: Store):
+    @test_store.process_output
     def f(x: int) -> Optional[int]:
         return x if x > 5 else None
 
@@ -144,7 +172,7 @@ def test_processors_not_passed_none():
     def process_int(x: int) -> None:
         mock(x)
 
-    with set_processors({int: process_int}):
+    with set_processors({int: process_int}, store=test_store):
         assert f(3) is None
         mock.assert_not_called()
         assert f(10) == 10

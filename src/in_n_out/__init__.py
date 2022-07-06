@@ -9,7 +9,7 @@ except PackageNotFoundError:  # pragma: no cover
 __author__ = "Talley Lambert"
 __email__ = "talley.lambert@gmail.com"
 
-from ._inject import inject_dependencies
+from ._inject import inject_dependencies, process_output
 from ._processors import iter_processors, processor, set_processors
 from ._providers import iter_providers, provider, set_providers
 from ._store import Store
@@ -26,6 +26,7 @@ __all__ = [
     "iter_providers",
     "inject_dependencies",
     "processor",
+    "process_output",
     "provider",
     "resolve_single_type_hints",
     "resolve_type_hints",
