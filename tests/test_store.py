@@ -98,7 +98,7 @@ def test_weakrefs_to_bound_methods(test_store: Store):
     reft = weakref.ref(t)
 
     test_store.register_processor(t.func)
-    test_store.process(int, 1)
+    test_store.process(1)
     mock.assert_called_once_with(1)
     mock.reset_mock()
 
@@ -110,7 +110,7 @@ def test_weakrefs_to_bound_methods(test_store: Store):
     gc.collect()
 
     assert reft() is None
-    test_store.process(int, 1)
+    test_store.process(1)
     mock.assert_not_called()
 
     assert test_store.provide(str) is None

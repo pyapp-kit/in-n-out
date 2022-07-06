@@ -27,7 +27,7 @@ def test_set_processors(test_store: Store, type, process, ask_type):
         assert list(test_store.iter_processors(type))
         assert list(test_store.iter_processors(ask_type))
         MOCK.reset_mock()
-        test_store.process(ask_type, 1)
+        test_store.process(1, hint=ask_type)
         MOCK.assert_called_once()
     assert not list(
         test_store.iter_processors(ask_type)
@@ -42,19 +42,19 @@ def test_set_processors_cleanup(test_store: Store):
     mock2 = Mock()
     with set_processors({int: lambda v: mock(v)}, store=test_store):
         assert len(test_store._processors) == 1
-        test_store.process(int, 2)
+        test_store.process(2)
         mock.assert_called_once_with(2)
         mock.reset_mock()
 
         with set_processors([(int, lambda x: mock2(x * x), 10)], store=test_store):
             assert len(test_store._processors) == 2
-            test_store.process(int, 2, first_processor_only=True)
+            test_store.process(2, first_processor_only=True)
             mock2.assert_called_once_with(4)
             mock.assert_not_called()
             mock2.reset_mock()
 
         assert len(test_store._processors) == 1
-        test_store.process(int, 2)
+        test_store.process(2)
         mock.assert_called_once_with(2)
         mock2.assert_not_called()
 

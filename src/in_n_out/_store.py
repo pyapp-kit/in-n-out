@@ -398,8 +398,9 @@ class Store:
 
     def process(
         self,
-        hint: Union[object, Type[T]],
         result: Any,
+        *,
+        hint: Union[object, Type[T], None] = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
     ) -> None:
@@ -410,10 +411,11 @@ class Store:
 
         Parameters
         ----------
-        hint : object
-            A type or type hint for which to return a value
         result : Any
             The result to process
+        hint : Union[object, Type[T], None],
+            An optional type hint to provide to the processor.  If not provided,
+            the type of `result` will be used.
         first_processor_only : bool, optional
             If `True`, only the first processor will be invoked, otherwise all
             processors will be invoked, in descending weight order.
@@ -421,6 +423,8 @@ class Store:
             If `True`, and a processor raises an exception, it will be raised
             and the remaining processors will not be invoked.
         """
+        if hint is None:
+            hint = type(result)
         for processor in self.iter_processors(hint):  # type: ignore
             try:
                 processor(result)
@@ -634,7 +638,7 @@ class Store:
 
                 if result is not None and process_result:
                     # TODO: pass on keywords
-                    self.process(_sig.return_annotation, result)
+                    self.process(result, hint=_sig.return_annotation)
 
                 return result
 

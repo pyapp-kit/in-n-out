@@ -46,7 +46,7 @@ def test_non_standard_types(test_store: Store, type_, mode) -> None:
         mock.assert_called_once()
     else:
         test_store.register_processor(mock, type_)
-        test_store.process(type_, 2)
+        test_store.process(2, hint=type_)
         mock.assert_called_once_with(2)
 
 
@@ -67,5 +67,15 @@ def test_subclass_pairs(test_store: Store, sub, sup, mode) -> None:
         mock.assert_called_once()
     else:
         test_store.register_processor(mock, sup)
-        test_store.process(sub, 2)
+        test_store.process(2, hint=sub)
         mock.assert_called_once_with(2)
+
+    test_store.clear()
+    mock.reset_mock()
+    if mode == "provider":
+        test_store.register_provider(sub, mock)
+        assert test_store.provide(sup) is None
+    else:
+        test_store.register_processor(sub, mock)
+        test_store.process(2, hint=sup)
+    mock.assert_not_called()
