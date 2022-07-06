@@ -6,4 +6,58 @@
 [![CI](https://github.com/tlambert03/in-n-out/actions/workflows/ci.yml/badge.svg)](https://github.com/tlambert03/in-n-out/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/tlambert03/in-n-out/branch/main/graph/badge.svg)](https://codecov.io/gh/tlambert03/in-n-out)
 
- plugable dependency injection and result processing
+Python dependency injection you can taste.
+
+A lightweight dependency injection and result processing framework
+for Python using type hints. Emphasis is on simplicity, ease of use,
+and minimal impact on source code.
+
+```python
+import in_n_out as ino
+
+
+class Thing:
+    def __init__(self, name: str):
+        self.name = name
+
+
+# use ino.inject to create a version of the function
+# that will retrieve the required dependencies at call time
+@ino.inject
+def func(thing: Thing):
+    return thing.name
+
+
+def give_me_a_thing() -> Thing:
+    return Thing("Thing")
+
+
+# register a provider of Thing
+ino.register_provider(give_me_a_thing)
+print(func())  # prints "Thing"
+
+
+def give_me_another_thing() -> Thing:
+    return Thing("Another Thing")
+
+
+with ino.register_provider(give_me_another_thing, weight=10):
+    print(func())  # prints "Another Thing"
+```
+
+This also supports processing *return* values as well
+(injection of intentional side effects):
+
+```python
+
+@ino.inject_processors
+def func2(thing: Thing) -> str:
+    return thing.name
+
+def greet_name(name: str) -> str:
+    print(f"Hello, {name}!")
+
+ino.register_processor(greet_name)
+
+func2(Thing('Bob'))  # prints "Hello, Bob!"
+```
