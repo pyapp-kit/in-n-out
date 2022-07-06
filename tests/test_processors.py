@@ -27,7 +27,7 @@ def test_set_processors(type, process, ask_type):
         assert list(ino.iter_processors(type))
         assert list(ino.iter_processors(ask_type))
         MOCK.reset_mock()
-        ino.process(1, hint=ask_type)
+        ino.process(1, type_hint=ask_type)
         MOCK.assert_called_once()
     # make sure context manager cleaned up
     assert not list(ino.iter_processors(ask_type))

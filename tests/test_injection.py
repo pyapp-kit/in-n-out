@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, inject, process_output, register
+from in_n_out import Store, inject, inject_processors, register
 
 
 def test_injection():
@@ -28,14 +28,32 @@ def test_inject_deps_and_providers(order):
     if order == "together":
         f = inject(f, providers=True, processors=True)
     elif order == "inject_first":
-        f = process_output(inject(f))
+        f = inject_processors(inject(f))
     elif order == "inject_last":
-        f = inject(process_output(f))
+        f = inject(inject_processors(f))
 
     with register(providers={int: lambda: 1}, processors={str: mock2}):
         assert f() == "1"
         mock.assert_called_once_with(1)
         mock2.assert_called_once_with("1")
+
+
+def test_inject_only_providers():
+    mock = Mock()
+
+    def f(i: int) -> str:
+        mock(i)
+        return str(i)
+
+    f2 = inject(f, providers=False, processors=False)
+    assert f2 is f
+
+    f3 = inject(f, providers=False, processors=True)
+    assert f3 is not f2
+
+    with register(processors={str: mock}):
+        assert f(1) == "1"
+        mock.assert_called_once_with(1)
 
 
 def test_injection_missing():
@@ -52,7 +70,7 @@ def test_injection_missing():
 
 
 def test_set_processor():
-    @process_output
+    @inject_processors
     def f2(x: int) -> int:
         return x
 
@@ -153,7 +171,7 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
 
 
 def test_processors_not_passed_none(test_store: Store):
-    @test_store.process_output
+    @test_store.inject_processors
     def f(x: int) -> Optional[int]:
         return x if x > 5 else None
 

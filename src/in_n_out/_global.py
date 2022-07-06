@@ -90,26 +90,12 @@ def register_processor(
     )
 
 
-@_add_store_to_doc
-def iter_providers(
-    hint: Union[object, Type[T]], store: Union[str, Store, None] = None
-) -> Iterable[Callable[[], Optional[T]]]:
-    return _store_or_global(store).iter_providers(hint)
-
-
-@_add_store_to_doc
-def iter_processors(
-    hint: Union[object, Type[T]], store: Union[str, Store, None] = None
-) -> Iterable[Callable[[T], Any]]:
-    return _store_or_global(store).iter_processors(hint)
-
-
 @overload
 def mark_provider(
     func: ProviderVar,
     *,
     weight: float = 0,
-    for_type: Optional[object] = None,
+    type_hint: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> ProviderVar:
     ...
@@ -120,7 +106,7 @@ def mark_provider(
     func: Literal[None] = ...,
     *,
     weight: float = 0,
-    for_type: Optional[object] = None,
+    type_hint: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> Callable[[ProviderVar], ProviderVar]:
     ...
@@ -131,34 +117,11 @@ def mark_provider(
     func: Optional[ProviderVar] = None,
     *,
     weight: float = 0,
-    for_type: Optional[object] = None,
+    type_hint: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
-    return _store_or_global(store).mark_provider(func, weight=weight, for_type=for_type)
-
-
-@_add_store_to_doc
-def provide(
-    hint: Union[object, Type[T]],
-    store: Union[str, Store, None] = None,
-) -> Optional[T]:
-    return _store_or_global(store).provide(hint=hint)
-
-
-@_add_store_to_doc
-def process(
-    result: Any,
-    *,
-    hint: Union[object, Type[T], None] = None,
-    first_processor_only: bool = False,
-    raise_exception: bool = False,
-    store: Union[str, Store, None] = None,
-) -> None:
-    return _store_or_global(store).process(
-        result=result,
-        hint=hint,
-        first_processor_only=first_processor_only,
-        raise_exception=raise_exception,
+    return _store_or_global(store).mark_provider(
+        func, weight=weight, type_hint=type_hint
     )
 
 
@@ -167,7 +130,7 @@ def mark_processor(
     func: ProcessorVar,
     *,
     weight: float = 0,
-    for_type: Optional[object] = None,
+    type_hint: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> ProcessorVar:
     ...
@@ -178,7 +141,7 @@ def mark_processor(
     func: Literal[None] = ...,
     *,
     weight: float = 0,
-    for_type: Optional[object] = None,
+    type_hint: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> Callable[[ProcessorVar], ProcessorVar]:
     ...
@@ -189,11 +152,50 @@ def mark_processor(
     func: Optional[ProcessorVar] = None,
     *,
     weight: float = 0,
-    for_type: Optional[object] = None,
+    type_hint: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[ProcessorVar], ProcessorVar], ProcessorVar]:
     return _store_or_global(store).mark_processor(
-        func, weight=weight, for_type=for_type
+        func, weight=weight, type_hint=type_hint
+    )
+
+
+@_add_store_to_doc
+def iter_providers(
+    type_hint: Union[object, Type[T]], store: Union[str, Store, None] = None
+) -> Iterable[Callable[[], Optional[T]]]:
+    return _store_or_global(store).iter_providers(type_hint)
+
+
+@_add_store_to_doc
+def iter_processors(
+    type_hint: Union[object, Type[T]], store: Union[str, Store, None] = None
+) -> Iterable[Callable[[T], Any]]:
+    return _store_or_global(store).iter_processors(type_hint)
+
+
+@_add_store_to_doc
+def provide(
+    type_hint: Union[object, Type[T]],
+    store: Union[str, Store, None] = None,
+) -> Optional[T]:
+    return _store_or_global(store).provide(type_hint=type_hint)
+
+
+@_add_store_to_doc
+def process(
+    result: Any,
+    *,
+    type_hint: Union[object, Type[T], None] = None,
+    first_processor_only: bool = False,
+    raise_exception: bool = False,
+    store: Union[str, Store, None] = None,
+) -> None:
+    return _store_or_global(store).process(
+        result=result,
+        type_hint=type_hint,
+        first_processor_only=first_processor_only,
+        raise_exception=raise_exception,
     )
 
 
@@ -247,7 +249,7 @@ def inject(
 
 
 @overload
-def process_output(
+def inject_processors(
     func: Callable[P, R],
     *,
     hint: Union[object, Type[T], None] = None,
@@ -259,7 +261,7 @@ def process_output(
 
 
 @overload
-def process_output(
+def inject_processors(
     func: Literal[None] = None,
     *,
     hint: Union[object, Type[T], None] = None,
@@ -271,7 +273,7 @@ def process_output(
 
 
 @_add_store_to_doc
-def process_output(
+def inject_processors(
     func: Optional[Callable[P, R]] = None,
     *,
     hint: Union[object, Type[T], None] = None,
@@ -279,9 +281,9 @@ def process_output(
     raise_exception: bool = False,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[Callable[P, R]], Callable[P, R]], Callable[P, R]]:
-    return _store_or_global(store).process_output(
+    return _store_or_global(store).inject_processors(
         func=func,
-        hint=hint,
+        type_hint=hint,
         first_processor_only=first_processor_only,
         raise_exception=raise_exception,
     )

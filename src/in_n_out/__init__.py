@@ -11,12 +11,12 @@ __email__ = "talley.lambert@gmail.com"
 
 from ._global import (
     inject,
+    inject_processors,
     iter_processors,
     iter_providers,
     mark_processor,
     mark_provider,
     process,
-    process_output,
     provide,
     register,
     register_processor,
@@ -36,7 +36,7 @@ __all__ = [
     "inject",
     "iter_processors",
     "iter_providers",
-    "process_output",
+    "inject_processors",
     "process",
     "mark_processor",
     "provide",
