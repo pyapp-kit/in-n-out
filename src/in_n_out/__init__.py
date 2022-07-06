@@ -9,9 +9,19 @@ except PackageNotFoundError:  # pragma: no cover
 __author__ = "Talley Lambert"
 __email__ = "talley.lambert@gmail.com"
 
-from ._inject import inject_dependencies, process_output
-from ._processors import iter_processors, processor, set_processors
-from ._providers import iter_providers, provider, set_providers
+from ._global import (
+    inject_dependencies,
+    iter_processors,
+    iter_providers,
+    process,
+    process_output,
+    processor,
+    provide,
+    provider,
+    register,
+    register_processor,
+    register_provider,
+)
 from ._store import Store
 from ._type_resolution import (
     resolve_single_type_hints,
@@ -21,17 +31,21 @@ from ._type_resolution import (
 from ._util import _compiled
 
 __all__ = [
+    "register_provider",
     "_compiled",
+    "inject_dependencies",
     "iter_processors",
     "iter_providers",
-    "inject_dependencies",
-    "processor",
     "process_output",
+    "process",
+    "processor",
+    "provide",
     "provider",
+    "register_processor",
+    "register",
+    "register",
     "resolve_single_type_hints",
     "resolve_type_hints",
-    "set_processors",
-    "set_providers",
     "Store",
     "type_resolved_signature",
 ]

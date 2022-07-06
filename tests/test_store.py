@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, inject_dependencies, provider, set_processors, set_providers
+from in_n_out import Store, inject_dependencies, provider
 from in_n_out._store import _GLOBAL
 
 
@@ -43,9 +43,9 @@ def test_store_clear(test_store: Store):
     assert not test_store._providers
     assert not test_store._processors
 
-    set_providers({int: 1}, store=test_store)
-    set_providers({Optional[str]: None}, store=test_store)
-    set_processors({int: print}, store=test_store)
+    test_store.register(providers={int: 1})
+    test_store.register(providers={Optional[str]: None})
+    test_store.register(processors={int: print})
     assert len(test_store._providers) == 2
     assert len(test_store._processors) == 1
 

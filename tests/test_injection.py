@@ -4,13 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import (
-    Store,
-    inject_dependencies,
-    process_output,
-    set_processors,
-    set_providers,
-)
+from in_n_out import Store, inject_dependencies, process_output, register
 
 
 def test_injection():
@@ -18,7 +12,7 @@ def test_injection():
     def f(i: int, s: str):
         return (i, s)
 
-    with set_providers({int: lambda: 1, str: lambda: "hi"}):
+    with register(providers={int: lambda: 1, str: lambda: "hi"}):
         assert f() == (1, "hi")
 
 
@@ -38,11 +32,10 @@ def test_inject_deps_and_providers(order):
     elif order == "inject_last":
         f = inject_dependencies(process_output(f))
 
-    with set_providers({int: lambda: 1}):
-        with set_processors({str: mock2}):
-            assert f() == "1"
-            mock.assert_called_once_with(1)
-            mock2.assert_called_once_with("1")
+    with register(providers={int: lambda: 1}, processors={str: mock2}):
+        assert f() == "1"
+        mock.assert_called_once_with(1)
+        mock2.assert_called_once_with("1")
 
 
 def test_injection_missing():
@@ -54,7 +47,7 @@ def test_injection_missing():
         f()
     assert "missing 1 required positional argument" in str(e.value)
     assert f(4) == 4
-    with set_providers({int: lambda: 1}):
+    with register(providers={int: lambda: 1}):
         assert f() == 1
 
 
@@ -70,7 +63,7 @@ def test_set_processor():
     def process_int(x: int) -> None:
         mock(x)
 
-    with set_processors({int: process_int}):
+    with register(processors={int: process_int}):
         assert f2(3) == 3
 
     mock.assert_called_once_with(3)
@@ -82,7 +75,7 @@ def test_injection_with_generator():
         yield x
 
     # setting the accessor to our local viewer
-    with set_providers({int: lambda: 1}):
+    with register(providers={int: lambda: 1}):
         assert tuple(f()) == (1,)
 
 
@@ -172,25 +165,25 @@ def test_processors_not_passed_none(test_store: Store):
     def process_int(x: int) -> None:
         mock(x)
 
-    with set_processors({int: process_int}, store=test_store):
+    with test_store.register(processors={int: process_int}):
         assert f(3) is None
         mock.assert_not_called()
         assert f(10) == 10
         mock.assert_called_once_with(10)
 
 
-def test_optional_provider_with_required_arg(test_store):
+def test_optional_provider_with_required_arg(test_store: Store):
     mock = Mock()
 
     @inject_dependencies(store=test_store)
     def f(x: int):
         mock(x)
 
-    with set_providers({Optional[int]: lambda: None}, store=test_store):
+    with test_store.register(providers={Optional[int]: lambda: None}):
         with pytest.raises(TypeError, match="missing 1 required positional argument"):
             f()
         mock.assert_not_called()
 
-    with set_providers({Optional[int]: lambda: 2}, store=test_store):
+    with test_store.register(providers={Optional[int]: lambda: 2}):
         f()
         mock.assert_called_once_with(2)

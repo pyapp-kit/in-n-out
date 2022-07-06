@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, iter_processors, processor, set_processors
+import in_n_out as ino
 
 R = object()
 
@@ -20,33 +20,31 @@ MOCK = Mock()
         (Union[list, tuple], lambda x: MOCK(), list),
     ],
 )
-def test_set_processors(test_store: Store, type, process, ask_type):
+def test_set_processors(type, process, ask_type):
     """Test that we can set processor as function or constant, and get it back."""
-    assert not list(test_store.iter_processors(ask_type))
-    with set_processors({type: process}, store=test_store):
-        assert list(test_store.iter_processors(type))
-        assert list(test_store.iter_processors(ask_type))
+    assert not list(ino.iter_processors(ask_type))
+    with ino.register(processors={type: process}):
+        assert list(ino.iter_processors(type))
+        assert list(ino.iter_processors(ask_type))
         MOCK.reset_mock()
-        test_store.process(1, hint=ask_type)
+        ino.process(1, hint=ask_type)
         MOCK.assert_called_once()
-    assert not list(
-        test_store.iter_processors(ask_type)
-    )  # make sure context manager cleaned up
-    assert len(test_store._processors) == 0
+    # make sure context manager cleaned up
+    assert not list(ino.iter_processors(ask_type))
 
 
-def test_set_processors_cleanup(test_store: Store):
+def test_set_processors_cleanup(test_store: ino.Store):
     """Test that we can set processors in contexts, and cleanup"""
     assert not list(test_store.iter_processors(int))
     mock = Mock()
     mock2 = Mock()
-    with set_processors({int: lambda v: mock(v)}, store=test_store):
+    with test_store.register(processors={int: lambda v: mock(v)}):
         assert len(test_store._processors) == 1
         test_store.process(2)
         mock.assert_called_once_with(2)
         mock.reset_mock()
 
-        with set_processors([(int, lambda x: mock2(x * x), 10)], store=test_store):
+        with test_store.register(processors=[(lambda x: mock2(x * x), int, 10)]):
             assert len(test_store._processors) == 2
             test_store.process(2, first_processor_only=True)
             mock2.assert_called_once_with(4)
@@ -61,7 +59,7 @@ def test_set_processors_cleanup(test_store: Store):
     assert not list(test_store.iter_processors(int))
 
 
-def test_processor_decorator(test_store: Store):
+def test_processor_decorator(test_store: ino.Store):
     """Test the @processor decorator."""
     assert not list(test_store.iter_processors(int))
 
@@ -75,12 +73,12 @@ def test_processor_decorator(test_store: Store):
     assert not list(test_store.iter_processors(int))
 
 
-def test_optional_processors(test_store: Store):
+def test_optional_processors(test_store: ino.Store):
     """Test processing Optional[type]."""
     assert not list(test_store.iter_processors(Optional[int]))
     assert not list(test_store.iter_processors(str))
 
-    @processor(store=test_store)
+    @test_store.processor
     def processes_int(x: int):
         return 1
 
@@ -98,13 +96,13 @@ def test_optional_processors(test_store: Store):
     # which means it also provides an Optional[str]
     assert next(test_store.iter_processors(Optional[str])) is processes_string
 
-    assert next(iter_processors(int, store=test_store)) is processes_int
+    assert next(test_store.iter_processors(int)) is processes_int
     # the definite processor takes precedence
     # TODO: consider this...
     assert next(test_store.iter_processors(Optional[int])) is processes_int
 
 
-def test_union_processors(test_store: Store):
+def test_union_processors(test_store: ino.Store):
     @test_store.processor
     def processes_int_or_str(x: Union[int, str]):
         return 1
@@ -116,12 +114,23 @@ def test_union_processors(test_store: Store):
 def test_unlikely_processor():
     with pytest.warns(UserWarning, match="has no argument type hints"):
 
-        @processor
+        @ino.processor
         def provides_int():
             ...
 
     with pytest.raises(ValueError, match="Processors must take at least one argument"):
-        set_processors({int: lambda: 1})
+        ino.register(processors={int: lambda: 1})
 
     with pytest.raises(ValueError, match="Processors must be callable"):
-        set_processors({int: 1})
+        ino.register(processors={int: 1})
+
+
+def test_global_register():
+    mock = Mock()
+
+    def f(x: int):
+        mock(x)
+
+    ino.register_processor(f)
+    ino.process(1)
+    mock.assert_called_once_with(1)
