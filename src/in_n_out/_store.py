@@ -11,6 +11,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    ContextManager,
     Dict,
     Iterable,
     List,
@@ -49,9 +50,9 @@ Disposer = Callable[[], None]
 Namespace = Mapping[str, object]
 HintArg = object
 Weight = float
-ProviderProcessorIterable = Iterable[
-    Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
-]
+
+
+CallbackTuple = Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
 
 
 _GLOBAL = "global"
@@ -72,6 +73,41 @@ class _RegisteredCallback(NamedTuple):
 class _CachedMap(NamedTuple):
     all: Dict[object, List[Union[Processor, Provider]]]
     subclassable: Dict[type, List[Union[Processor, Provider]]]
+
+
+class InjectionContext(ContextManager):
+    def __init__(
+        self,
+        store: Store,
+        *,
+        providers: Union[Iterable[CallbackTuple], None] = None,
+        processors: Union[Iterable[CallbackTuple], None] = None,
+    ) -> None:
+        self._store = store
+        self._disposers = []
+        if providers is not None:
+            self._disposers.append(store._register_callbacks(providers, True))
+        if processors is not None:
+            self._disposers.append(store._register_callbacks(processors, False))
+
+    def __exit__(self, *_: Any) -> None:
+        self.dispose()
+
+    def dispose(self) -> Any:
+        for dispose in self._disposers:
+            dispose()
+        self._disposers.clear()
+
+    def __call__(self) -> None:
+        self.dispose()
+
+
+# store.register_provider  # set
+# store.register_providers  # set
+# store.provider  # set
+
+# store.iter_providers  # get
+# store.provide  # run
 
 
 class Store:
@@ -201,7 +237,7 @@ class Store:
         provider: Provider,
         type_hint: Optional[object] = None,
         weight: float = 0,
-    ) -> Disposer:
+    ) -> InjectionContext:
         """Register `provider` as a provider of `type_hint`.
 
         Parameters
@@ -220,12 +256,18 @@ class Store:
         Callable
             A function that unregisters the provider.
         """
-        return self.register_providers([(type_hint, provider, weight)])
+        return self.register(providers=[(type_hint, provider, weight)])
 
-    def register_providers(
+    def register(
         self,
-        providers: Union[Mapping[object, Callable], ProviderProcessorIterable],
-    ) -> Disposer:
+        *,
+        providers: Union[
+            Mapping[object, Callable], Iterable[CallbackTuple], None
+        ] = None,
+        processors: Union[
+            Mapping[object, Callable], Iterable[CallbackTuple], None
+        ] = None,
+    ) -> InjectionContext:
         """Register multiple providers at once.
 
         Parameters
@@ -239,7 +281,7 @@ class Store:
         Callable
             A function that unregisters the provider.
         """
-        return self._register_callbacks(providers, True)
+        return InjectionContext(self, providers=providers, processors=processors)
 
     def iter_providers(
         self, hint: Union[object, Type[T]]
@@ -373,26 +415,7 @@ class Store:
         Callable
             A function that unregisters the processor.
         """
-        return self.register_processors([(type_hint, processor, weight)])
-
-    def register_processors(
-        self,
-        processors: Union[Mapping[object, Processor], ProviderProcessorIterable],
-    ) -> Disposer:
-        """Register multiple processors at once.
-
-        Parameters
-        ----------
-        processors : Union[Mapping[object, Callable], ProviderProcessorIterable]
-            Either a mapping of {type_hint: processor} pairs, or an iterable of
-            (type_hint, processor) or (type_hint, processor, weight) tuples.
-
-        Returns
-        -------
-        Callable
-            A function that unregisters the provider.
-        """
-        return self._register_callbacks(processors, False)
+        return self.register(processors=[(type_hint, processor, weight)])
 
     def iter_processors(
         self, hint: Union[object, Type[T]]
@@ -833,7 +856,7 @@ class Store:
 
     def _register_callbacks(
         self,
-        callbacks: Union[Mapping[object, Callable], ProviderProcessorIterable],
+        callbacks: Union[Mapping[object, Callable], Iterable[CallbackTuple]],
         providers: bool = True,
     ) -> Disposer:
 

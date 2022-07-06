@@ -2,14 +2,14 @@ from typing import Optional, Sequence
 
 import pytest
 
-from in_n_out import Store, iter_providers, provider, set_providers
+from in_n_out import Store, iter_providers, provider, register
 
 glb = Store.get_store()
 
 
 def test_provider_resolution():
-    with set_providers(
-        [
+    with register(
+        providers=[
             (Optional[int], lambda: None),
             (Optional[int], lambda: 2),
             (int, lambda: 1),
@@ -26,10 +26,10 @@ def test_provider_resolution():
         (Sequence, [], list, []),  # we can ask for a subclass of a provided types
     ],
 )
-def test_set_providers(test_store: Store, type, provide, ask_type, expect):
+def test_register_providers(test_store: Store, type, provide, ask_type, expect):
     """Test that we can set provider as either function or constant, and get it back."""
     assert not test_store.provide(ask_type)
-    with set_providers({type: provide}, store=test_store):
+    with test_store.register_provider(provider=provide, type_hint=type):
         assert test_store.provide(ask_type) == expect
     assert not test_store.provide(ask_type)  # make sure context manager cleaned up
 

@@ -1,58 +1,6 @@
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Literal,
-    Mapping,
-    Optional,
-    Type,
-    Union,
-    overload,
-)
+from typing import Any, Callable, Iterable, Literal, Optional, Type, Union, overload
 
-from ._store import Processor, ProviderProcessorIterable, Store, T
-
-
-class set_processors:
-    """Set processor(s) for given type(s).
-
-    "Processors" are functions that can "do something" with an instance of the
-    type that they support.
-
-    This is a class that behaves as a function or a context manager, that
-    allows one to set a processor function for a given type.
-
-    Parameters
-    ----------
-    mapping : Dict[Type[T], Callable[..., Optional[T]]]
-        a map of type -> processor function, where each value is a function
-        that is capable of retrieving an instance of the associated key/type.
-    clobber : bool, optional
-        Whether to override any existing processor function, by default False.
-    store : Union[str, Store, None]
-        The processor store to use, if not provided the global store is used.
-
-    Raises
-    ------
-    ValueError
-        if clobber is `True` and one of the keys in `mapping` is already
-        registered.
-    """
-
-    def __init__(
-        self,
-        processors: Union[Mapping[object, Callable], ProviderProcessorIterable],
-        *,
-        store: Union[str, Store, None] = None,
-    ):
-        self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._dispose = self._store.register_processors(processors)
-
-    def __enter__(self) -> Store:
-        return self._store
-
-    def __exit__(self, *_: Any) -> None:
-        self._dispose()
+from ._store import Processor, Store, T
 
 
 def iter_processors(

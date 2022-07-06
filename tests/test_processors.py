@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, iter_processors, processor, set_processors
+from in_n_out import Store, iter_processors, processor, register
 
 R = object()
 
@@ -23,7 +23,7 @@ MOCK = Mock()
 def test_set_processors(test_store: Store, type, process, ask_type):
     """Test that we can set processor as function or constant, and get it back."""
     assert not list(test_store.iter_processors(ask_type))
-    with set_processors({type: process}, store=test_store):
+    with register(processors={type: process}, store=test_store):
         assert list(test_store.iter_processors(type))
         assert list(test_store.iter_processors(ask_type))
         MOCK.reset_mock()
@@ -40,13 +40,13 @@ def test_set_processors_cleanup(test_store: Store):
     assert not list(test_store.iter_processors(int))
     mock = Mock()
     mock2 = Mock()
-    with set_processors({int: lambda v: mock(v)}, store=test_store):
+    with test_store.register(processors={int: lambda v: mock(v)}):
         assert len(test_store._processors) == 1
         test_store.process(2)
         mock.assert_called_once_with(2)
         mock.reset_mock()
 
-        with set_processors([(int, lambda x: mock2(x * x), 10)], store=test_store):
+        with test_store.register(processors=[(int, lambda x: mock2(x * x), 10)]):
             assert len(test_store._processors) == 2
             test_store.process(2, first_processor_only=True)
             mock2.assert_called_once_with(4)
@@ -121,7 +121,7 @@ def test_unlikely_processor():
             ...
 
     with pytest.raises(ValueError, match="Processors must take at least one argument"):
-        set_processors({int: lambda: 1})
+        register(processors={int: lambda: 1})
 
     with pytest.raises(ValueError, match="Processors must be callable"):
-        set_processors({int: 1})
+        register(processors={int: 1})

@@ -1,51 +1,6 @@
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Literal,
-    Mapping,
-    Optional,
-    Type,
-    Union,
-    overload,
-)
+from typing import Callable, Iterable, Literal, Optional, Type, Union, overload
 
-from ._store import Provider, ProviderProcessorIterable, Store, T
-
-
-class set_providers:
-    """Set provider(s) for given type(s).
-
-    "Providers" are functions that can retrieve an instance of a given type.
-
-    This is a class that behaves as a function or a context manager, that
-    allows one to set a provider function for a given type temporarily.
-
-    If not used as a context, the provider function is set permanently.
-
-    Parameters
-    ----------
-    providers : Union[Mapping[object, Callable], ProviderProcessorIterable]
-        Either a mapping of {type_hint: provider} pairs, or an iterable of
-        (type_hint, provider) or (type_hint, provider, weight) tuples.
-    store : Union[str, Store, None]
-        The provider store to use, if not provided the global store is used.
-    """
-
-    def __init__(
-        self,
-        providers: Union[Mapping[object, Callable], ProviderProcessorIterable],
-        *,
-        store: Union[str, Store, None] = None,
-    ) -> None:
-        self._store = store if isinstance(store, Store) else Store.get_store(store)
-        self._dispose = self._store.register_providers(providers)
-
-    def __enter__(self) -> Store:
-        return self._store
-
-    def __exit__(self, *_: Any) -> None:
-        self._dispose()
+from ._store import Provider, Store, T
 
 
 def iter_providers(
