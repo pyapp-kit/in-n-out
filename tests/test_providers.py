@@ -94,3 +94,6 @@ def test_unlikely_provider():
         @provider
         def provides_int():
             ...
+
+    with pytest.raises(ValueError, match="has no return type hint"):
+        Store.get_store().register_provider(lambda: None)

@@ -181,18 +181,19 @@ class Store:
 
     def register_provider(
         self,
-        type_hint: object,
         provider: Provider,
+        type_hint: Optional[object] = None,
         weight: float = 0,
     ) -> Disposer:
         """Register `provider` as a provider of `type_hint`.
 
         Parameters
         ----------
-        type_hint : object
-            A type or type hint that `provider` provides.
         provider : Callable
             A provider callback. Must be able to accept no arguments.
+        type_hint : Optional[object]
+            A type or type hint that `provider` provides.  If not provided, it will
+            be inferred from the return annotation of `provider`.
         weight : float, optional
             A weight with which to sort this provider. Higher weights are given
             priority, by default 0
@@ -319,13 +320,11 @@ class Store:
         ...     return 42
         """
 
-        def _deco(func: ProviderVar, hint: Optional[object] = for_type) -> ProviderVar:
-            if hint is None:
-                hint = resolve_type_hints(func, localns=self.namespace).get("return")
-            if hint is None:
-                warnings.warn(f"{func} has no return type hint. Cannot be a provider.")
-            else:
-                self.register_provider(type_hint=hint, provider=func, weight=weight)
+        def _deco(func: ProviderVar) -> ProviderVar:
+            try:
+                self.register_provider(func, type_hint=for_type, weight=weight)
+            except ValueError as e:
+                warnings.warn(str(e))
             return func
 
         return _deco(func) if func is not None else _deco
@@ -334,8 +333,8 @@ class Store:
 
     def register_processor(
         self,
-        type_hint: object,
         processor: Processor,
+        type_hint: Optional[object] = None,
         weight: float = 0,
     ) -> Disposer:
         """Register `processor` as a processor of `type_hint`.
@@ -487,21 +486,11 @@ class Store:
         ...     print("Processing int:", x)
         """
 
-        def _deco(
-            func: ProcessorVar, hint: Optional[object] = for_type
-        ) -> ProcessorVar:
-            if hint is None:
-                hints = resolve_type_hints(func, localns=self.namespace)
-                hints.pop("return", None)
-                if hints:
-                    hint = list(hints.values())[0]
-
-            if hint is None:
-                warnings.warn(
-                    f"{func} has no argument type hints. Cannot be a processor."
-                )
-            else:
-                self.register_processor(type_hint=hint, processor=func, weight=weight)
+        def _deco(func: ProcessorVar) -> ProcessorVar:
+            try:
+                self.register_processor(func, type_hint=for_type, weight=weight)
+            except ValueError as e:
+                warnings.warn(str(e))
             return func
 
         return _deco(func) if func is not None else _deco
@@ -750,6 +739,27 @@ class Store:
             check = _validate_processor
 
         for type_, callback, *weight in callbacks:
+
+            if type_ is None:
+                hints = resolve_type_hints(callback, localns=self.namespace)
+                if providers:
+                    type_ = hints.get("return")
+                else:
+                    type_ = next((v for k, v in hints.items() if k != "return"), None)
+
+            if type_ is None:
+                if providers:
+                    m = (
+                        f"{callback} has no return type hint (and no hint provided at "
+                        "registration). Cannot be a provider."
+                    )
+                else:
+                    m = (
+                        f"{callback} has no argument type hints (and no hint provided "
+                        "at registration). Cannot be a processor."
+                    )
+                raise ValueError(m)
+
             origins, is_optional = _split_union(type_)
             for origin in origins:
                 subclassable: bool = True
