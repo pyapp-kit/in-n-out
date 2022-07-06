@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import contextlib
+import types
 import warnings
+import weakref
 from functools import cached_property, wraps
 from inspect import CO_VARARGS, isgeneratorfunction
 from types import CodeType
@@ -728,16 +730,19 @@ class Store:
         providers: bool = True,
     ) -> Disposer:
 
-        _p: List[_RegisteredCallback] = []
+        if providers:
+            reg = self._providers
+            cache_map = "_cached_provider_map"
+            check: Callable[[Any], Callable] = _validate_provider
+        else:
+            reg = self._processors
+            cache_map = "_cached_processor_map"
+            check = _validate_processor
 
         if isinstance(callbacks, Mapping):
             callbacks = callbacks.items()
 
-        if providers:
-            check: Callable[[Any], Callable] = _validate_provider
-        else:
-            check = _validate_processor
-
+        _p: List[_RegisteredCallback] = []
         for type_, callback, *weight in callbacks:
 
             if type_ is None:
@@ -761,6 +766,14 @@ class Store:
                 raise ValueError(m)
 
             origins, is_optional = _split_union(type_)
+            callback = check(callback)
+
+            if isinstance(callback, types.MethodType):
+                # if the callback is a method, we need to wrap it in a weakref
+                # to prevent a strong reference to the owner object.
+                callback = self._methodwrap(callback, reg, cache_map)
+
+            _weight = weight[0] if weight else 0
             for origin in origins:
                 subclassable: bool = True
                 if not issubclassable(origin):
@@ -777,34 +790,50 @@ class Store:
                 _p.append(
                     _RegisteredCallback(
                         origin=origin,
-                        callback=check(callback),
+                        callback=callback,
                         hint_optional=is_optional,
-                        weight=weight[0] if weight else 0,
+                        weight=_weight,
                         subclassable=subclassable,
                     )
                 )
-
-        reg = self._providers if providers else self._processors
 
         def _dispose() -> None:
             for p in _p:
                 with contextlib.suppress(ValueError):
                     reg.remove(p)
+            # attribute error in case the cache was never built
             with contextlib.suppress(AttributeError):
-                if providers:
-                    del self._cached_provider_map
-                else:
-                    del self._cached_processor_map
+                delattr(self, cache_map)
 
         if _p:
             reg.extend(_p)
+            # attribute error in case the cache was never built
             with contextlib.suppress(AttributeError):
-                if providers:
-                    del self._cached_provider_map
-                else:
-                    del self._cached_processor_map
+                delattr(self, cache_map)
 
         return _dispose
+
+    def _methodwrap(
+        self, callback: types.MethodType, reg: List[_RegisteredCallback], cache_map: str
+    ) -> Callable:
+        """Wrap a method in a weakref to prevent a strong reference to the owner."""
+        ref = weakref.WeakMethod(callback)
+
+        def _callback(*args: Any, **kwargs: Any) -> Any:
+            cb = ref()
+            if cb is not None:
+                return cb(*args, **kwargs)
+
+            # The callback was garbage collected.  Remove it from the registry.
+            for item in reversed(reg):
+                if item.callback is _callback:
+                    reg.remove(item)
+
+            # attribute error in case the cache was never built
+            with contextlib.suppress(AttributeError):
+                delattr(self, cache_map)
+
+        return _callback
 
 
 Store._instances[_GLOBAL] = GLOBAL_STORE = Store(_GLOBAL)
