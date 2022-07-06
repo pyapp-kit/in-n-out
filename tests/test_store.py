@@ -97,12 +97,12 @@ def test_weakrefs_to_bound_methods(test_store: Store):
     t = T()
     reft = weakref.ref(t)
 
-    test_store.register_processor(int, t.func)
+    test_store.register_processor(t.func)
     test_store.process(int, 1)
     mock.assert_called_once_with(1)
     mock.reset_mock()
 
-    test_store.register_provider(str, t.func2)
+    test_store.register_provider(t.func2)
     assert test_store.provide(str) == "hi"
 
     del t
