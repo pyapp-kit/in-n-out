@@ -329,7 +329,7 @@ class Store:
         return None
 
     @overload
-    def provider(
+    def mark_provider(
         self,
         func: ProviderVar,
         *,
@@ -339,7 +339,7 @@ class Store:
         ...
 
     @overload
-    def provider(
+    def mark_provider(
         self,
         func: Literal[None] = ...,
         *,
@@ -348,7 +348,7 @@ class Store:
     ) -> Callable[[ProviderVar], ProviderVar]:
         ...
 
-    def provider(
+    def mark_provider(
         self,
         func: Optional[ProviderVar] = None,
         *,
@@ -498,7 +498,7 @@ class Store:
                 break
 
     @overload
-    def processor(
+    def mark_processor(
         self,
         func: ProcessorVar,
         *,
@@ -508,7 +508,7 @@ class Store:
         ...
 
     @overload
-    def processor(
+    def mark_processor(
         self,
         func: Literal[None] = ...,
         *,
@@ -517,7 +517,7 @@ class Store:
     ) -> Callable[[ProcessorVar], ProcessorVar]:
         ...
 
-    def processor(
+    def mark_processor(
         self,
         func: Optional[ProcessorVar] = None,
         *,
@@ -564,37 +564,40 @@ class Store:
     # ------------------------------------------------------------------------------
 
     @overload
-    def inject_dependencies(
+    def inject(
         self,
         func: Callable[P, R],
         *,
+        providers: bool = True,
+        processors: bool = False,
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        process_output: bool = False,
     ) -> Callable[P, R]:
         ...
 
     @overload
-    def inject_dependencies(
+    def inject(
         self,
         func: Literal[None] = None,
         *,
+        providers: bool = True,
+        processors: bool = False,
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        process_output: bool = False,
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         ...
 
-    def inject_dependencies(
+    def inject(
         self,
         func: Optional[Callable[P, R]] = None,
         *,
+        providers: bool = True,
+        processors: bool = False,
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        process_output: bool = False,
     ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
         """Decorator returns func that can access/process objects based on type hints.
 
@@ -613,6 +616,15 @@ class Store:
         ----------
         func : Callable[P, R]
             a function with type hints
+        providers : bool
+            Whether to inject dependency providers. If `True` (default), then when this
+            function is called, arguments will be injected into the function call
+            according to providers that have been registered in the store.
+        processors : bool
+            Whether to invoke all processors for this function's return type the when
+            this function is called. Important: this causes *side effects*. By default,
+            `False`. Output processing can also be enabled (with additionl fine tuning)
+            by using the `@store.process_result` decorator.
         localns : Optional[dict]
             Optional local namespace for name resolution, by default None
         on_unresolved_required_args : RaiseWarnReturnIgnore
@@ -636,13 +648,6 @@ class Store:
                 - 'warn': warn, but continue decorating
                 - 'return': immediately return the original function without warning
                 - 'ignore': continue decorating without warning.
-
-        process_output : bool
-            Whether to additionally "inject" output processing into the function
-            being decorated. If used, the output will be additionally decorated with
-            self.process_output before returning. `process_output` can also be used
-            on its, if it is desired to *only* process outputs, but not inject
-            dependencies.
 
         Returns
         -------
@@ -734,7 +739,7 @@ class Store:
                 out.__doc__ or ""
             ) + "\n\n*This function will inject dependencies when called.*"
 
-            if process_output and sig.return_annotation is not sig.empty:
+            if processors:
                 return self.process_output(out, hint=sig.return_annotation)
             return out
 

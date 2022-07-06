@@ -105,7 +105,7 @@ def iter_processors(
 
 
 @overload
-def provider(
+def mark_provider(
     func: ProviderVar,
     *,
     weight: float = 0,
@@ -116,7 +116,7 @@ def provider(
 
 
 @overload
-def provider(
+def mark_provider(
     func: Literal[None] = ...,
     *,
     weight: float = 0,
@@ -127,14 +127,14 @@ def provider(
 
 
 @_add_store_to_doc
-def provider(
+def mark_provider(
     func: Optional[ProviderVar] = None,
     *,
     weight: float = 0,
     for_type: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
-    return _store_or_global(store).provider(func, weight=weight, for_type=for_type)
+    return _store_or_global(store).mark_provider(func, weight=weight, for_type=for_type)
 
 
 @_add_store_to_doc
@@ -163,7 +163,7 @@ def process(
 
 
 @overload
-def processor(
+def mark_processor(
     func: ProcessorVar,
     *,
     weight: float = 0,
@@ -174,7 +174,7 @@ def processor(
 
 
 @overload
-def processor(
+def mark_processor(
     func: Literal[None] = ...,
     *,
     weight: float = 0,
@@ -185,58 +185,64 @@ def processor(
 
 
 @_add_store_to_doc
-def processor(
+def mark_processor(
     func: Optional[ProcessorVar] = None,
     *,
     weight: float = 0,
     for_type: Optional[object] = None,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[ProcessorVar], ProcessorVar], ProcessorVar]:
-    return _store_or_global(store).processor(func, weight=weight, for_type=for_type)
+    return _store_or_global(store).mark_processor(
+        func, weight=weight, for_type=for_type
+    )
 
 
 @overload
-def inject_dependencies(
+def inject(
     func: Callable[P, R],
     *,
+    providers: bool = True,
+    processors: bool = False,
     localns: Optional[dict] = None,
     on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    process_output: bool = False,
     store: Union[str, Store, None] = None,
 ) -> Callable[P, R]:
     ...
 
 
 @overload
-def inject_dependencies(
+def inject(
     func: Literal[None] = None,
     *,
+    providers: bool = True,
+    processors: bool = False,
     localns: Optional[dict] = None,
     on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    process_output: bool = False,
     store: Union[str, Store, None] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     ...
 
 
 @_add_store_to_doc
-def inject_dependencies(
+def inject(
     func: Optional[Callable[P, R]] = None,
     *,
+    providers: bool = True,
+    processors: bool = False,
     localns: Optional[dict] = None,
     on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    process_output: bool = False,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
-    return _store_or_global(store).inject_dependencies(
+    return _store_or_global(store).inject(
         func=func,
+        providers=providers,
+        processors=processors,
         localns=localns,
         on_unresolved_required_args=on_unresolved_required_args,
         on_unannotated_required_args=on_unannotated_required_args,
-        process_output=process_output,
     )
 
 

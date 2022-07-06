@@ -63,7 +63,7 @@ def test_processor_decorator(test_store: ino.Store):
     """Test the @processor decorator."""
     assert not list(test_store.iter_processors(int))
 
-    @test_store.processor
+    @test_store.mark_processor
     def processes_int(x: int):
         ...
 
@@ -78,11 +78,11 @@ def test_optional_processors(test_store: ino.Store):
     assert not list(test_store.iter_processors(Optional[int]))
     assert not list(test_store.iter_processors(str))
 
-    @test_store.processor
+    @test_store.mark_processor
     def processes_int(x: int):
         return 1
 
-    @test_store.processor  # these decorators are equivalent
+    @test_store.mark_processor  # these decorators are equivalent
     def processes_string(x: str):
         ...
 
@@ -103,7 +103,7 @@ def test_optional_processors(test_store: ino.Store):
 
 
 def test_union_processors(test_store: ino.Store):
-    @test_store.processor
+    @test_store.mark_processor
     def processes_int_or_str(x: Union[int, str]):
         return 1
 
@@ -114,7 +114,7 @@ def test_union_processors(test_store: ino.Store):
 def test_unlikely_processor():
     with pytest.warns(UserWarning, match="has no argument type hints"):
 
-        @ino.processor
+        @ino.mark_processor
         def provides_int():
             ...
 

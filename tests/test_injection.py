@@ -4,11 +4,11 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, inject_dependencies, process_output, register
+from in_n_out import Store, inject, process_output, register
 
 
 def test_injection():
-    @inject_dependencies
+    @inject
     def f(i: int, s: str):
         return (i, s)
 
@@ -26,11 +26,11 @@ def test_inject_deps_and_providers(order):
         return str(i)
 
     if order == "together":
-        f = inject_dependencies(f, process_output=True)
+        f = inject(f, providers=True, processors=True)
     elif order == "inject_first":
-        f = process_output(inject_dependencies(f))
+        f = process_output(inject(f))
     elif order == "inject_last":
-        f = inject_dependencies(process_output(f))
+        f = inject(process_output(f))
 
     with register(providers={int: lambda: 1}, processors={str: mock2}):
         assert f() == "1"
@@ -39,7 +39,7 @@ def test_inject_deps_and_providers(order):
 
 
 def test_injection_missing():
-    @inject_dependencies
+    @inject
     def f(x: int):
         return x
 
@@ -70,7 +70,7 @@ def test_set_processor():
 
 
 def test_injection_with_generator():
-    @inject_dependencies
+    @inject
     def f(x: int):
         yield x
 
@@ -85,7 +85,7 @@ def test_injection_without_args():
     def f():
         ...
 
-    assert inject_dependencies(f) is f
+    assert inject(f) is f
 
 
 modes = ["raise", "warn", "return", "ignore"]
@@ -140,7 +140,7 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
             expect_same_func_back = True
 
     with ctx:
-        out_func = inject_dependencies(
+        out_func = inject(
             in_func,
             on_unannotated_required_args=on_unannotated,
             on_unresolved_required_args=on_unresolved,
@@ -175,7 +175,7 @@ def test_processors_not_passed_none(test_store: Store):
 def test_optional_provider_with_required_arg(test_store: Store):
     mock = Mock()
 
-    @inject_dependencies(store=test_store)
+    @inject(store=test_store)
     def f(x: int):
         mock(x)
 

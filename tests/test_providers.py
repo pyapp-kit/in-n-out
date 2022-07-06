@@ -36,7 +36,7 @@ def test_provider_decorator(test_store: ino.Store):
     """Test the @provider decorator."""
     assert not test_store.provide(int)
 
-    @test_store.provider
+    @test_store.mark_provider
     def provides_int() -> int:
         return 1
 
@@ -52,11 +52,11 @@ def test_optional_providers(test_store: ino.Store):
     assert not list(test_store.iter_providers(Optional[int]))
     assert not list(test_store.iter_providers(str))
 
-    @test_store.provider
+    @test_store.mark_provider
     def provides_optional_int() -> Optional[int]:
         return 1
 
-    @test_store.provider
+    @test_store.mark_provider
     def provides_str() -> str:
         return "hi"
 
@@ -70,7 +70,7 @@ def test_optional_providers(test_store: ino.Store):
     assert next(test_store.iter_providers(Optional[str])) is provides_str
 
     # also register a provider for int
-    @test_store.provider(weight=10)
+    @test_store.mark_provider(weight=10)
     def provides_int() -> int:
         return 1
 
@@ -89,7 +89,7 @@ def test_optional_providers(test_store: ino.Store):
 def test_unlikely_provider():
     with pytest.warns(UserWarning, match="has no return type hint"):
 
-        @ino.provider
+        @ino.mark_provider
         def provides_int():
             ...
 
