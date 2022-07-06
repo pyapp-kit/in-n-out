@@ -17,7 +17,9 @@ from typing import (
 from ._store import (
     CallbackIterable,
     InjectionContext,
+    Processor,
     ProcessorVar,
+    Provider,
     ProviderVar,
     Store,
     T,
@@ -65,6 +67,30 @@ def register(
 
 
 @_add_store_to_doc
+def register_provider(
+    provider: Provider,
+    type_hint: Optional[object] = None,
+    weight: float = 0,
+    store: Union[str, Store, None] = None,
+) -> InjectionContext:
+    return _store_or_global(store).register_provider(
+        provider=provider, type_hint=type_hint, weight=weight
+    )
+
+
+@_add_store_to_doc
+def register_processor(
+    processor: Processor,
+    type_hint: Optional[object] = None,
+    weight: float = 0,
+    store: Union[str, Store, None] = None,
+) -> InjectionContext:
+    return _store_or_global(store).register_processor(
+        processor=processor, type_hint=type_hint, weight=weight
+    )
+
+
+@_add_store_to_doc
 def iter_providers(
     hint: Union[object, Type[T]], store: Union[str, Store, None] = None
 ) -> Iterable[Callable[[], Optional[T]]]:
@@ -109,6 +135,31 @@ def provider(
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
     return _store_or_global(store).provider(func, weight=weight, for_type=for_type)
+
+
+@_add_store_to_doc
+def provide(
+    hint: Union[object, Type[T]],
+    store: Union[str, Store, None] = None,
+) -> Optional[T]:
+    return _store_or_global(store).provide(hint=hint)
+
+
+@_add_store_to_doc
+def process(
+    result: Any,
+    *,
+    hint: Union[object, Type[T], None] = None,
+    first_processor_only: bool = False,
+    raise_exception: bool = False,
+    store: Union[str, Store, None] = None,
+) -> None:
+    return _store_or_global(store).process(
+        result=result,
+        hint=hint,
+        first_processor_only=first_processor_only,
+        raise_exception=raise_exception,
+    )
 
 
 @overload

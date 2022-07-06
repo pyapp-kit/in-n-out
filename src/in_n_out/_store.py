@@ -333,8 +333,8 @@ class Store:
         self,
         func: ProviderVar,
         *,
-        weight: float = 0,
         for_type: Optional[object] = None,
+        weight: float = 0,
     ) -> ProviderVar:
         ...
 
@@ -343,8 +343,8 @@ class Store:
         self,
         func: Literal[None] = ...,
         *,
-        weight: float = 0,
         for_type: Optional[object] = None,
+        weight: float = 0,
     ) -> Callable[[ProviderVar], ProviderVar]:
         ...
 
@@ -352,8 +352,8 @@ class Store:
         self,
         func: Optional[ProviderVar] = None,
         *,
-        weight: float = 0,
         for_type: Optional[object] = None,
+        weight: float = 0,
     ) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
         """Decorate `func` as a provider of its first parameter type.
 
@@ -364,12 +364,12 @@ class Store:
         ----------
         func : Optional[Provider]
             A function to decorate. If not provided, a decorator is returned.
-        weight : float
-            A weight with which to sort this provider. Higher weights are given
-            priority, by default 0
         for_type : Optional[object]
             Optional type or type hint for which to register this provider. If not
             provided, the return annotation of `func` will be used.
+        weight : float
+            A weight with which to sort this provider. Higher weights are given
+            priority, by default 0
 
         Returns
         -------
@@ -502,8 +502,8 @@ class Store:
         self,
         func: ProcessorVar,
         *,
-        weight: float = 0,
         for_type: Optional[object] = None,
+        weight: float = 0,
     ) -> ProcessorVar:
         ...
 
@@ -512,8 +512,8 @@ class Store:
         self,
         func: Literal[None] = ...,
         *,
-        weight: float = 0,
         for_type: Optional[object] = None,
+        weight: float = 0,
     ) -> Callable[[ProcessorVar], ProcessorVar]:
         ...
 
@@ -521,8 +521,8 @@ class Store:
         self,
         func: Optional[ProcessorVar] = None,
         *,
-        weight: float = 0,
         for_type: Optional[object] = None,
+        weight: float = 0,
     ) -> Union[Callable[[ProcessorVar], ProcessorVar], ProcessorVar]:
         """Decorate `func` as a processor of its first parameter type.
 
@@ -530,14 +530,14 @@ class Store:
         ----------
         func : Optional[Processor], optional
             A function to decorate. If not provided, a decorator is returned.
+        for_type : Optional[object]
+            Optional type or type hint that this processor can handle. If not
+            provided, the type hint of the first parameter of `func` will be used.
         weight : float, optional
             A weight with which to sort this processor. Higher weights are given
             priority, by default 0.  When invoking processors, all processors
             will be invoked in descending weight order, unless `first_processor_only`
             is set to `True`.
-        for_type : Optional[object]
-            Optional type or type hint that this processor can handle. If not
-            provided, the type hint of the first parameter of `func` will be used.
 
         Returns
         -------
@@ -923,13 +923,14 @@ class Store:
             callback, *rest = tup
             type_: Optional[HintArg] = None
             weight: float = 0
-            if len(rest) == 1:
-                type_ = rest[0]
-                weight = 0
-            elif len(rest) == 2:
-                type_, weight = cast(Tuple[Optional[HintArg], float], rest)
-            else:  # pragma: no cover
-                raise ValueError(f"Invalid callback tuple: {tup!r}")
+            if rest:
+                if len(rest) == 1:
+                    type_ = rest[0]
+                    weight = 0
+                elif len(rest) == 2:
+                    type_, weight = cast(Tuple[Optional[HintArg], float], rest)
+                else:  # pragma: no cover
+                    raise ValueError(f"Invalid callback tuple: {tup!r}")
 
             if type_ is None:
                 hints = resolve_type_hints(callback, localns=self.namespace)

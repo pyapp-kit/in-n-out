@@ -13,10 +13,14 @@ from ._global import (
     inject_dependencies,
     iter_processors,
     iter_providers,
+    process,
     process_output,
     processor,
+    provide,
     provider,
     register,
+    register_processor,
+    register_provider,
 )
 from ._store import Store
 from ._type_resolution import (
@@ -27,13 +31,17 @@ from ._type_resolution import (
 from ._util import _compiled
 
 __all__ = [
+    "register_provider",
     "_compiled",
     "inject_dependencies",
     "iter_processors",
     "iter_providers",
     "process_output",
+    "process",
     "processor",
+    "provide",
     "provider",
+    "register_processor",
     "register",
     "register",
     "resolve_single_type_hints",
