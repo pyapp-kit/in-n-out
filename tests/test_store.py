@@ -107,7 +107,7 @@ def test_weakrefs_to_bound_methods(test_store: Store):
 
     del t
     gc.collect()
-    assert not gc.collect()
+    gc.collect()
 
     assert reft() is None
     test_store.process(int, 1)
