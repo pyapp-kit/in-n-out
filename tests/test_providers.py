@@ -2,39 +2,37 @@ from typing import Optional, Sequence
 
 import pytest
 
-from in_n_out import Store, iter_providers, provider, register
-
-glb = Store.get_store()
+import in_n_out as ino
 
 
 def test_provider_resolution():
-    with register(
+    with ino.register(
         providers=[
             (lambda: None, Optional[int]),
             (lambda: 2, Optional[int]),
             (lambda: 1, int),
         ]
     ):
-        assert glb.provide(Optional[int]) == 2
+        assert ino.Store.get_store().provide(Optional[int]) == 2
 
 
 @pytest.mark.parametrize(
-    "type, provide, ask_type, expect",
+    "type, provider, ask_type, expect",
     [
         (int, lambda: 1, int, 1),  # provider can be a function
         (int, 1, int, 1),  # or a constant value
         (Sequence, [], list, []),  # we can ask for a subclass of a provided types
     ],
 )
-def test_register_providers(test_store: Store, type, provide, ask_type, expect):
+def test_register_providers(type, provider, ask_type, expect):
     """Test that we can set provider as either function or constant, and get it back."""
-    assert not test_store.provide(ask_type)
-    with test_store.register_provider(provider=provide, type_hint=type):
-        assert test_store.provide(ask_type) == expect
-    assert not test_store.provide(ask_type)  # make sure context manager cleaned up
+    assert not ino.provide(ask_type)
+    with ino.register_provider(provider=provider, type_hint=type):
+        assert ino.provide(ask_type) == expect
+    assert not ino.provide(ask_type)  # make sure context manager cleaned up
 
 
-def test_provider_decorator(test_store: Store):
+def test_provider_decorator(test_store: ino.Store):
     """Test the @provider decorator."""
     assert not test_store.provide(int)
 
@@ -42,14 +40,14 @@ def test_provider_decorator(test_store: Store):
     def provides_int() -> int:
         return 1
 
-    assert next(iter_providers(int, store=test_store)) is provides_int
+    assert next(ino.iter_providers(int, store=test_store)) is provides_int
     assert test_store.provide(int) == 1
 
     test_store.clear()
     assert not test_store.provide(int)
 
 
-def test_optional_providers(test_store: Store):
+def test_optional_providers(test_store: ino.Store):
     """Test providing & getting Optional[type]."""
     assert not list(test_store.iter_providers(Optional[int]))
     assert not list(test_store.iter_providers(str))
@@ -91,9 +89,17 @@ def test_optional_providers(test_store: Store):
 def test_unlikely_provider():
     with pytest.warns(UserWarning, match="has no return type hint"):
 
-        @provider
+        @ino.provider
         def provides_int():
             ...
 
     with pytest.raises(ValueError, match="has no return type hint"):
-        Store.get_store().register_provider(lambda: None)
+        ino.register_provider(lambda: None)
+
+
+def test_global_register():
+    def f() -> int:
+        return 1
+
+    ino.register_provider(f)
+    assert ino.provide(int) == 1
