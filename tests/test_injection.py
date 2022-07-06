@@ -38,6 +38,24 @@ def test_inject_deps_and_providers(order):
         mock2.assert_called_once_with("1")
 
 
+def test_inject_only_providers():
+    mock = Mock()
+
+    def f(i: int) -> str:
+        mock(i)
+        return str(i)
+
+    f2 = inject(f, providers=False, processors=False)
+    assert f2 is f
+
+    f3 = inject(f, providers=False, processors=True)
+    assert f3 is not f2
+
+    with register(processors={str: mock}):
+        assert f(1) == "1"
+        mock.assert_called_once_with(1)
+
+
 def test_injection_missing():
     @inject
     def f(x: int):
