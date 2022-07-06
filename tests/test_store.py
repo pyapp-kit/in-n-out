@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, inject_dependencies, provider
+from in_n_out import Store, inject, mark_provider
 from in_n_out._store import _GLOBAL
 
 
@@ -58,14 +58,14 @@ def test_store_namespace(test_store: Store):
     class T:
         ...
 
-    @provider(store=test_store)
+    @mark_provider(store=test_store)
     def provide_t() -> T:
         return T()
 
     # namespace can be a static dict
     test_store.namespace = {"Hint": T}
 
-    @inject_dependencies(store=test_store)
+    @inject(store=test_store)
     def use_t(t: "Hint") -> None:  # type: ignore  # noqa: F821
         return t
 
@@ -74,7 +74,7 @@ def test_store_namespace(test_store: Store):
     # namespace can also be a callable
     test_store.namespace = lambda: {"Hint2": T}
 
-    @inject_dependencies(store="test")
+    @inject(store="test")
     def use_t2(t: "Hint2") -> None:  # type: ignore  # noqa: F821
         return t
 
