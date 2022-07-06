@@ -61,3 +61,14 @@ ino.register_processor(greet_name)
 
 func2(Thing('Bob'))  # prints "Hello, Bob!"
 ```
+
+### Alternatives
+
+Lots of other python DI frameworks exist, here are a few alternatives to consider:
+
+- <https://github.com/ets-labs/python-dependency-injector>
+- <https://github.com/google/pinject>
+- <https://github.com/ivankorobkov/python-inject>
+- <https://github.com/alecthomas/injector>
+- <https://github.com/Finistere/antidote>
+- <https://github.com/dry-python/returns>
