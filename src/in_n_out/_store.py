@@ -532,6 +532,7 @@ class Store:
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        process_output: bool = False,
     ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
         """Decorator returns func that can access/process objects based on type hints.
 
@@ -605,7 +606,6 @@ class Store:
             )
             if sig is None:  # something went wrong, and the user was notified.
                 return func
-            process_result = sig.return_annotation is not sig.empty
 
             # get provider functions for each required parameter
             @wraps(func)
@@ -636,10 +636,6 @@ class Store:
                         f"{e}"
                     ) from e
 
-                if result is not None and process_result:
-                    # TODO: pass on keywords
-                    self.process(result, hint=_sig.return_annotation)
-
                 return result
 
             out = _exec
@@ -662,9 +658,43 @@ class Store:
             out.__doc__ = (
                 out.__doc__ or ""
             ) + "\n\n*This function will inject dependencies when called.*"
+
+            if process_output and sig.return_annotation is not sig.empty:
+                return self.process_output(out, hint=sig.return_annotation)
             return out
 
         return _inner(func) if func is not None else _inner
+
+    def process_output(
+        self,
+        func: Optional[Callable[P, R]] = None,
+        *,
+        hint: Union[object, Type[T], None] = None,
+        first_processor_only: bool = False,
+        raise_exception: bool = False,
+    ) -> Union[Callable[[Callable[P, R]], Callable[P, R]], Callable[P, R]]:
+        def _deco(func: Callable[P, R]) -> Callable[P, R]:
+            nonlocal hint
+            if hint is None:
+                annotations = getattr(func, "__annotations__", {})
+                if "return" in annotations:
+                    hint = annotations["return"]
+
+            @wraps(func)
+            def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
+                result = func(*args, **kwargs)
+                if result is not None:
+                    self.process(
+                        result,
+                        hint=hint,
+                        first_processor_only=first_processor_only,
+                        raise_exception=raise_exception,
+                    )
+                return result
+
+            return _exec
+
+        return _deco(func) if func is not None else _deco
 
     # -----------------
 

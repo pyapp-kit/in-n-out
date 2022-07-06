@@ -24,7 +24,7 @@ def inject_dependencies(
     store: Union[str, Store, None] = None,
     on_unresolved_required_args: OptRaiseWarnReturnIgnore = None,
     on_unannotated_required_args: OptRaiseWarnReturnIgnore = None,
-) -> Callable[P, R]:
+) -> Callable[..., R]:
     ...
 
 
@@ -36,7 +36,7 @@ def inject_dependencies(
     store: Union[str, Store, None] = None,
     on_unresolved_required_args: OptRaiseWarnReturnIgnore = None,
     on_unannotated_required_args: OptRaiseWarnReturnIgnore = None,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
+) -> Callable[[Callable[..., R]], Callable[..., R]]:
     ...
 
 
@@ -47,7 +47,7 @@ def inject_dependencies(
     store: Union[str, Store, None] = None,
     on_unresolved_required_args: OptRaiseWarnReturnIgnore = None,
     on_unannotated_required_args: OptRaiseWarnReturnIgnore = None,
-) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
+) -> Union[Callable[..., R], Callable[[Callable[..., R]], Callable[..., R]]]:
     """Decorator returns func that can access/process objects based on type hints.
 
     This is form of dependency injection, and result processing.  It does 2 things:

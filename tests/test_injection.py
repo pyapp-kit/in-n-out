@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import inject_dependencies, set_processors, set_providers
+from in_n_out import Store, inject_dependencies, set_processors, set_providers
 
 
 def test_injection():
@@ -14,6 +14,21 @@ def test_injection():
 
     with set_providers({int: lambda: 1, str: lambda: "hi"}):
         assert f() == (1, "hi")
+
+
+def test_inject_deps_and_providers(test_store: Store):
+    mock = Mock()
+    mock2 = Mock()
+
+    @test_store.inject_dependencies(process_output=True)
+    def f(i: int) -> str:
+        mock(i)
+        return str(i)
+
+    with set_providers({int: lambda: 1}), set_processors({str: mock2}):
+        assert f() == "1"
+        mock.assert_called_once_with(1)
+        mock2.assert_called_once_with("1")
 
 
 def test_injection_missing():
@@ -131,8 +146,8 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
             assert out_func is not in_func
 
 
-def test_processors_not_passed_none():
-    @inject_dependencies
+def test_processors_not_passed_none(test_store: Store):
+    @test_store.process_output
     def f(x: int) -> Optional[int]:
         return x if x > 5 else None
 
