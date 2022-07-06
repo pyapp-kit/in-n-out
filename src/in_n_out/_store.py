@@ -135,7 +135,20 @@ class Store:
 
     @classmethod
     def destroy(cls, name: str) -> None:
-        """Destroy Store instance with the given `name`."""
+        """Destroy Store instance with the given `name`.
+
+        Parameters
+        ----------
+        name : str
+            The name of the Store.
+
+        Raises
+        ------
+        ValueError
+            If the name matches the global store name.
+        KeyError
+            If the name is not in use.
+        """
         name = name.lower()
         if name == _GLOBAL:
             raise ValueError("The global store cannot be destroyed")
@@ -180,6 +193,8 @@ class Store:
     @namespace.setter
     def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]) -> None:
         self._namespace = ns
+
+    # -------------------------------------------------------------------------
 
     def register_provider(
         self,
@@ -511,6 +526,7 @@ class Store:
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        process_output: bool = False,
     ) -> Callable[P, R]:
         ...
 
@@ -522,6 +538,7 @@ class Store:
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        process_output: bool = False,
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         ...
 
@@ -574,6 +591,13 @@ class Store:
                 - 'warn': warn, but continue decorating
                 - 'return': immediately return the original function without warning
                 - 'ignore': continue decorating without warning.
+
+        process_output : bool
+            Whether to additionally "inject" output processing into the function
+            being decorated. If used, the output will be additionally decorated with
+            self.process_output before returning. `process_output` can also be used
+            on its, if it is desired to *only* process outputs, but not inject
+            dependencies.
 
         Returns
         -------
@@ -665,6 +689,28 @@ class Store:
 
         return _inner(func) if func is not None else _inner
 
+    @overload
+    def process_output(
+        self,
+        func: Callable[P, R],
+        *,
+        hint: Union[object, Type[T], None] = None,
+        first_processor_only: bool = False,
+        raise_exception: bool = False,
+    ) -> Callable[P, R]:
+        ...
+
+    @overload
+    def process_output(
+        self,
+        func: Literal[None] = None,
+        *,
+        hint: Union[object, Type[T], None] = None,
+        first_processor_only: bool = False,
+        raise_exception: bool = False,
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+        ...
+
     def process_output(
         self,
         func: Optional[Callable[P, R]] = None,
@@ -673,6 +719,33 @@ class Store:
         first_processor_only: bool = False,
         raise_exception: bool = False,
     ) -> Union[Callable[[Callable[P, R]], Callable[P, R]], Callable[P, R]]:
+        """Decorate a function to process its output.
+
+        When the decorated function is called, the return value will be processed
+        with `store.process(return_value)` before returning the result.
+
+        Parameters
+        ----------
+        func : Optional[Callable]
+            A function to decorate
+        hint : Union[object, Type[T], None]
+            Type hint for the return value.  If not provided, the type will be inferred
+            first from the return annotation of the function, and if that is not
+            provided, from the `type(return_value)`.
+        first_processor_only : bool, optional
+            If `True`, only the first processor will be invoked, otherwise all
+            processors will be invoked, in descending weight order.
+        raise_exception : bool, optional
+            If `True`, and a processor raises an exception, it will be raised
+            and the remaining processors will not be invoked.
+
+        Returns
+        -------
+        Callable
+            A function that, when called, will have its return value processed by
+            `store.process(return_value)`
+        """
+
         def _deco(func: Callable[P, R]) -> Callable[P, R]:
             nonlocal hint
             if hint is None:

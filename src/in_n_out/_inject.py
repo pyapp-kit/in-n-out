@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union, overload
+from typing import TYPE_CHECKING, Type, Union, overload
 
 from ._store import Store
 
@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
     P = ParamSpec("P")
     R = TypeVar("R")
+    T = TypeVar("T")
     OptRaiseWarnReturnIgnore = Optional[RaiseWarnReturnIgnore]
 
 
@@ -24,6 +25,7 @@ def inject_dependencies(
     store: Union[str, Store, None] = None,
     on_unresolved_required_args: OptRaiseWarnReturnIgnore = None,
     on_unannotated_required_args: OptRaiseWarnReturnIgnore = None,
+    process_output: bool = False,
 ) -> Callable[..., R]:
     ...
 
@@ -36,6 +38,7 @@ def inject_dependencies(
     store: Union[str, Store, None] = None,
     on_unresolved_required_args: OptRaiseWarnReturnIgnore = None,
     on_unannotated_required_args: OptRaiseWarnReturnIgnore = None,
+    process_output: bool = False,
 ) -> Callable[[Callable[..., R]], Callable[..., R]]:
     ...
 
@@ -47,6 +50,7 @@ def inject_dependencies(
     store: Union[str, Store, None] = None,
     on_unresolved_required_args: OptRaiseWarnReturnIgnore = None,
     on_unannotated_required_args: OptRaiseWarnReturnIgnore = None,
+    process_output: bool = False,
 ) -> Union[Callable[..., R], Callable[[Callable[..., R]], Callable[..., R]]]:
     """Decorator returns func that can access/process objects based on type hints.
 
@@ -92,6 +96,13 @@ def inject_dependencies(
             - 'return': stop decorating, return the original function without warning
             - 'ignore': continue decorating without warning.
 
+    process_output : bool
+        Whether to additionally "inject" output processing into the function
+        being decorated. If used, the output will be additionally decorated with
+        self.process_output before returning. `process_output` can also be used
+        on its, if it is desired to *only* process outputs, but not inject
+        dependencies.
+
     Returns
     -------
     Callable
@@ -103,4 +114,51 @@ def inject_dependencies(
         localns=localns,
         on_unresolved_required_args=on_unresolved_required_args,
         on_unannotated_required_args=on_unannotated_required_args,
+        process_output=process_output,
+    )
+
+
+def process_output(
+    func: Optional[Callable[P, R]] = None,
+    *,
+    hint: Union[object, Type[T], None] = None,
+    first_processor_only: bool = False,
+    raise_exception: bool = False,
+    store: Union[str, Store, None] = None,
+) -> Union[Callable[[Callable[P, R]], Callable[P, R]], Callable[P, R]]:
+    """Decorate a function to process its output.
+
+    When the decorated function is called, the return value will be processed
+    with `store.process(return_value)` before returning the result.
+
+    Parameters
+    ----------
+    func : Optional[Callable]
+        A function to decorate
+    hint : Union[object, Type[T], None]
+        Type hint for the return value.  If not provided, the type will be inferred
+        first from the return annotation of the function, and if that is not
+        provided, from the `type(return_value)`.
+    first_processor_only : bool, optional
+        If `True`, only the first processor will be invoked, otherwise all
+        processors will be invoked, in descending weight order.
+    raise_exception : bool, optional
+        If `True`, and a processor raises an exception, it will be raised
+        and the remaining processors will not be invoked.
+    store : Union[str, Store, None]
+        Optional store to use when retrieving providers and processors,
+        by default the global store will be used.
+
+    Returns
+    -------
+    Callable
+        A function that, when called, will have its return value processed by
+        `store.process(return_value)`
+    """
+    _store = store if isinstance(store, Store) else Store.get_store(store)
+    return _store.process_output(
+        func=func,
+        hint=hint,
+        first_processor_only=first_processor_only,
+        raise_exception=raise_exception,
     )
