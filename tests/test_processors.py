@@ -46,7 +46,7 @@ def test_set_processors_cleanup(test_store: Store):
         mock.assert_called_once_with(2)
         mock.reset_mock()
 
-        with test_store.register(processors=[(int, lambda x: mock2(x * x), 10)]):
+        with test_store.register(processors=[(lambda x: mock2(x * x), int, 10)]):
             assert len(test_store._processors) == 2
             test_store.process(2, first_processor_only=True)
             mock2.assert_called_once_with(4)

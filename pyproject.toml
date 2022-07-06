@@ -93,7 +93,7 @@ D105  # missing docstring in magic method
 D401  # imperative mood
 W503  # line break before binary operator
 """
-per-file-ignores = ["tests/*,benchmarks/*:D"]
+per-file-ignores = ["tests/*,benchmarks/*,src/in_n_out/_global.py:D"]
 
 
 # http://www.pydocstyle.org/en/stable/usage.html

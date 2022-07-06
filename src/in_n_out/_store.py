@@ -42,17 +42,27 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
-Provider = Callable[[], Any]
+Provider = Callable[[], Any]  # provider should be able to take no arguments
+Processor = Callable[[Any], Any]  # a processor must take one positional arg
+PPCallback = Union[Provider, Processor]
+
+# typevars that retain the signatures of the values passed in
 ProviderVar = TypeVar("ProviderVar", bound=Provider)
-Processor = Callable[[Any], Any]
 ProcessorVar = TypeVar("ProcessorVar", bound=Processor)
+
 Disposer = Callable[[], None]
 Namespace = Mapping[str, object]
 HintArg = object
 Weight = float
 
-
-CallbackTuple = Union[Tuple[HintArg, Callable], Tuple[HintArg, Callable, Weight]]
+# (callback,)
+# (callback, type_hint)
+# (callback, type_hint, weight)
+CallbackTuple = Union[
+    Tuple[PPCallback], Tuple[PPCallback, HintArg], Tuple[PPCallback, HintArg, Weight]
+]
+# All of the valid argument that can be passed to register()
+CallbackIterable = Union[Iterable[CallbackTuple], Mapping[HintArg, PPCallback]]
 
 
 _GLOBAL = "global"
@@ -76,14 +86,18 @@ class _CachedMap(NamedTuple):
 
 
 class InjectionContext(ContextManager):
+    """Context manager for registering callbacks.
+
+    Primarily used as `with store.regsiter(...)`.
+    """
+
     def __init__(
         self,
         store: Store,
         *,
-        providers: Union[Iterable[CallbackTuple], None] = None,
-        processors: Union[Iterable[CallbackTuple], None] = None,
+        providers: Optional[CallbackIterable] = None,
+        processors: Optional[CallbackIterable] = None,
     ) -> None:
-        self._store = store
         self._disposers = []
         if providers is not None:
             self._disposers.append(store._register_callbacks(providers, True))
@@ -91,23 +105,13 @@ class InjectionContext(ContextManager):
             self._disposers.append(store._register_callbacks(processors, False))
 
     def __exit__(self, *_: Any) -> None:
-        self.dispose()
+        self.cleanup()
 
-    def dispose(self) -> Any:
+    def cleanup(self) -> Any:
+        """Cleanup any callbacks registered in this context."""
         for dispose in self._disposers:
             dispose()
         self._disposers.clear()
-
-    def __call__(self) -> None:
-        self.dispose()
-
-
-# store.register_provider  # set
-# store.register_providers  # set
-# store.provider  # set
-
-# store.iter_providers  # get
-# store.provide  # run
 
 
 class Store:
@@ -256,49 +260,50 @@ class Store:
         Callable
             A function that unregisters the provider.
         """
-        return self.register(providers=[(type_hint, provider, weight)])
+        return self.register(providers=[(provider, type_hint, weight)])
 
     def register(
         self,
         *,
-        providers: Union[
-            Mapping[object, Callable], Iterable[CallbackTuple], None
-        ] = None,
-        processors: Union[
-            Mapping[object, Callable], Iterable[CallbackTuple], None
-        ] = None,
+        providers: Optional[CallbackIterable] = None,
+        processors: Optional[CallbackIterable] = None,
     ) -> InjectionContext:
-        """Register multiple providers at once.
+        """Register multiple providers and/or processors at once.
+
+        This may be used as a context manager.
 
         Parameters
         ----------
-        providers : Union[Mapping[object, Callable], ProviderProcessorIterable]
-            Either a mapping of {type_hint: provider} pairs, or an iterable of
-            (type_hint, provider) or (type_hint, provider, weight) tuples.
+        providers :Optional[CallbackIterable]
+            Either a mapping of {type_hint: provider} pairs, or an iterable of tuples.
+            Tuples must be 1, 2 or 3 elements, in the form:
+            (provider,), (provider, type_hint) or (provider, type_hint, weight)
+        processors :Optional[CallbackIterable]
+            Either a mapping of {type_hint: processor} pairs, or an iterable of tuples.
+            Tuples must be 1, 2 or 3 elements, in the form:
+            (processor,), (processor, type_hint) or (processor, type_hint, weight)
 
         Returns
         -------
-        Callable
-            A function that unregisters the provider.
+        InjectionContext
+            Context manager for unregistering providers and processors. If the context
+            is entered with `with store.register(): ...`, then callbacks will be
+            unregistered when the context is exited.  Callbacks may also be unregistered
+            manually using the `.cleanup()` method of the returned context manager.
+
+        Examples
+        --------
+        >>> with store.register(
+                providers={int: lambda: 42},  # provided as hint->callback map
+                processors=[
+                    (my_callback),  # hint inferred from signature
+                    (my_other_callback, str),  # hint explicitly provided
+                    (my_third_callback, int, 10)  # weight explicitly provided
+                ],
+            ):
+                ...
         """
         return InjectionContext(self, providers=providers, processors=processors)
-
-    def iter_providers(
-        self, hint: Union[object, Type[T]]
-    ) -> Iterable[Callable[[], Optional[T]]]:
-        """Iterate over all providers of `hint`.
-
-        Parameters
-        ----------
-        hint : Union[object, Type[T]]
-            A type or type hint for which to return providers.
-
-        Yields
-        ------
-        Iterable[Callable[[], Optional[T]]]
-            Iterable of provider callbacks.
-        """
-        return self._iter_type_map(hint, self._cached_provider_map)
 
     def provide(self, hint: Union[object, Type[T]]) -> Optional[T]:
         """Provide an instance of `hint`.
@@ -395,7 +400,7 @@ class Store:
         processor: Processor,
         type_hint: Optional[object] = None,
         weight: float = 0,
-    ) -> Disposer:
+    ) -> InjectionContext:
         """Register `processor` as a processor of `type_hint`.
 
         Parameters
@@ -415,7 +420,24 @@ class Store:
         Callable
             A function that unregisters the processor.
         """
-        return self.register(processors=[(type_hint, processor, weight)])
+        return self.register(processors=[(processor, type_hint, weight)])
+
+    def iter_providers(
+        self, hint: Union[object, Type[T]]
+    ) -> Iterable[Callable[[], Optional[T]]]:
+        """Iterate over all providers of `hint`.
+
+        Parameters
+        ----------
+        hint : Union[object, Type[T]]
+            A type or type hint for which to return providers.
+
+        Yields
+        ------
+        Iterable[Callable[[], Optional[T]]]
+            Iterable of provider callbacks.
+        """
+        return self._iter_type_map(hint, self._cached_provider_map)
 
     def iter_processors(
         self, hint: Union[object, Type[T]]
@@ -657,10 +679,10 @@ class Store:
             # get provider functions for each required parameter
             @wraps(func)
             def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
-                # sourcery skip: use-named-expression
                 # we're actually calling the "injected function" now
 
-                _sig = cast("Signature", sig)
+                _sig = cast("Signature", sig)  # mypy thinks sig is still optional
+
                 # first, get and call the provider functions for each parameter type:
                 _kwargs: Dict[str, Any] = {}
                 for param in _sig.parameters.values():
@@ -674,13 +696,19 @@ class Store:
                 bound.apply_defaults()
                 _kwargs.update(**bound.arguments)
 
-                try:  # call the function with injected values
+                # call the function with injected values
+                try:
                     result = func(**_kwargs)
                 except TypeError as e:
                     # likely a required argument is still missing.
+                    # show what was injected and raise
+                    _argnames = (
+                        f"arguments: {', '.join(set(_kwargs))}"
+                        if _kwargs
+                        else "NO arguments"
+                    )
                     raise TypeError(
-                        f"After injecting dependencies for arguments {set(_kwargs)}, "
-                        f"{e}"
+                        f"After injecting dependencies for {_argnames}, {e}"
                     ) from e
 
                 return result
@@ -856,54 +884,67 @@ class Store:
 
     def _register_callbacks(
         self,
-        callbacks: Union[Mapping[object, Callable], Iterable[CallbackTuple]],
+        callbacks: CallbackIterable,
         providers: bool = True,
     ) -> Disposer:
 
         if providers:
             reg = self._providers
             cache_map = "_cached_provider_map"
-            check: Callable[[Any], Callable] = _validate_provider
+            check_callback: Callable[[Any], Callable] = _validate_provider
+            err_msg = (
+                "{} has no return type hint (and no hint provided at "
+                "registration). Cannot be a provider."
+            )
+
+            def _type_from_hints(hints: Dict[str, Any]) -> Any:
+                return hints.get("return")
+
         else:
             reg = self._processors
             cache_map = "_cached_processor_map"
-            check = _validate_processor
+            check_callback = _validate_processor
+            err_msg = (
+                "{} has no argument type hints (and no hint provided "
+                "at registration). Cannot be a processor."
+            )
 
+            def _type_from_hints(hints: Dict[str, Any]) -> Any:
+                return next((v for k, v in hints.items() if k != "return"), None)
+
+        _callbacks: Iterable[CallbackTuple]
         if isinstance(callbacks, Mapping):
-            callbacks = callbacks.items()
+            _callbacks = ((v, k) for k, v in callbacks.items())
+        else:
+            _callbacks = callbacks
 
-        _p: List[_RegisteredCallback] = []
-        for type_, callback, *weight in callbacks:
+        to_register: List[_RegisteredCallback] = []
+        for tup in _callbacks:
+            callback, *rest = tup
+            type_: Optional[HintArg] = None
+            weight: float = 0
+            if len(rest) == 1:
+                type_ = rest[0]
+                weight = 0
+            elif len(rest) == 2:
+                type_, weight = cast(Tuple[Optional[HintArg], float], rest)
+            else:  # pragma: no cover
+                raise ValueError(f"Invalid callback tuple: {tup!r}")
 
             if type_ is None:
                 hints = resolve_type_hints(callback, localns=self.namespace)
-                if providers:
-                    type_ = hints.get("return")
-                else:
-                    type_ = next((v for k, v in hints.items() if k != "return"), None)
+                type_ = _type_from_hints(hints)
+                if type_ is None:
+                    raise ValueError(err_msg.format(callback))
 
-            if type_ is None:
-                if providers:
-                    m = (
-                        f"{callback} has no return type hint (and no hint provided at "
-                        "registration). Cannot be a provider."
-                    )
-                else:
-                    m = (
-                        f"{callback} has no argument type hints (and no hint provided "
-                        "at registration). Cannot be a processor."
-                    )
-                raise ValueError(m)
-
-            origins, is_optional = _split_union(type_)
-            callback = check(callback)
+            callback = check_callback(callback)
 
             if isinstance(callback, types.MethodType):
                 # if the callback is a method, we need to wrap it in a weakref
                 # to prevent a strong reference to the owner object.
                 callback = self._methodwrap(callback, reg, cache_map)
 
-            _weight = weight[0] if weight else 0
+            origins, is_opt = _split_union(type_)
             for origin in origins:
                 subclassable: bool = True
                 if not issubclassable(origin):
@@ -917,26 +958,20 @@ class Store:
                             "is not hashable and cannot be passed as the second "
                             "argument to `issubclass`"
                         ) from None
-                _p.append(
-                    _RegisteredCallback(
-                        origin=origin,
-                        callback=callback,
-                        hint_optional=is_optional,
-                        weight=_weight,
-                        subclassable=subclassable,
-                    )
-                )
+
+                cb = _RegisteredCallback(origin, callback, is_opt, weight, subclassable)
+                to_register.append(cb)
 
         def _dispose() -> None:
-            for p in _p:
+            for p in to_register:
                 with contextlib.suppress(ValueError):
                     reg.remove(p)
             # attribute error in case the cache was never built
             with contextlib.suppress(AttributeError):
                 delattr(self, cache_map)
 
-        if _p:
-            reg.extend(_p)
+        if to_register:
+            reg.extend(to_register)
             # attribute error in case the cache was never built
             with contextlib.suppress(AttributeError):
                 delattr(self, cache_map)

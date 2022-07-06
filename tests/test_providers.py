@@ -10,9 +10,9 @@ glb = Store.get_store()
 def test_provider_resolution():
     with register(
         providers=[
-            (Optional[int], lambda: None),
-            (Optional[int], lambda: 2),
-            (int, lambda: 1),
+            (lambda: None, Optional[int]),
+            (lambda: 2, Optional[int]),
+            (lambda: 1, int),
         ]
     ):
         assert glb.provide(Optional[int]) == 2
