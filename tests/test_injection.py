@@ -205,3 +205,14 @@ def test_optional_provider_with_required_arg(test_store: Store):
     with test_store.register(providers={Optional[int]: lambda: 2}):
         f()
         mock.assert_called_once_with(2)
+
+
+class Foo:
+    def method(self):
+        return self
+
+
+def test_inject_instance_into_unbound_method():
+    foo = Foo()
+    with register(providers={Foo: lambda: foo}):
+        assert inject(Foo.method)() == foo

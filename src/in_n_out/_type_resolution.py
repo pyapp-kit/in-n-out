@@ -108,6 +108,7 @@ def type_resolved_signature(
     *,
     localns: Optional[dict] = None,
     raise_unresolved_optional_args: bool = True,
+    guess_self: bool = True,
 ) -> Signature:
     """Return a Signature object for a function with resolved type annotations.
 
@@ -120,6 +121,17 @@ def type_resolved_signature(
     raise_unresolved_optional_args : bool
         Whether to raise an exception when an optional parameter (one with a default
         value) has an unresolvable type annotation, by default True
+    guess_self : bool
+        Whether to infer the type of the first argument if the function is an unbound
+        class method. This is done as follows:
+            - if '.' (but not '<locals>') is in the function's __qualname__
+            - and if the first parameter is named 'self' or starts with "_"
+            - and if the first parameter annotation is `inspect.empty`
+            - then the name preceding `func.__name__` in the function's __qualname__
+              (which is usually the class name), is looked up in the function's
+              `__globals__` namespace. If found, it is used as the first parameter's
+              type annotation.
+        This allows class methods to be injected with instances of the class.
 
     Returns
     -------
@@ -136,11 +148,29 @@ def type_resolved_signature(
         an unresolvable type annotation.
     """
     sig = Signature.from_callable(func)
+    hints = {}
+    if guess_self:
+        p0 = next(iter(sig.parameters.values()))
+        # The best identifier i can figure for a class method is that:
+        # 1. its qualname contains a period (e.g. "MyClass.my_method"),
+        # 2. the first parameter tends to be named "self", or some private variable
+        # 3. the first parameter tends to be unannotated
+        qualname = getattr(func, "__qualname__", "")
+        if (
+            "." in qualname
+            and "<locals>" not in qualname  # don't support locally defd types
+            and (p0.name == "self" or p0.name.startswith("_"))
+            and p0.annotation is p0.empty
+        ):
+            # look up the class name in the function's globals
+            cls_name = qualname.replace(func.__name__, "").rstrip(".")
+            func_globals = getattr(func, "__globals__", {})
+            if cls_name in func_globals:
+                # add it to the type hints
+                hints = {p0.name: func_globals[cls_name]}
+
     try:
-        hints = resolve_type_hints(
-            func,
-            localns=localns,
-        )
+        hints.update(resolve_type_hints(func, localns=localns))
     except (NameError, TypeError) as err:
         if raise_unresolved_optional_args:
             raise NameError(
@@ -211,6 +241,7 @@ def _resolve_sig_or_inform(
     localns: Optional[dict],
     on_unresolved_required_args: RaiseWarnReturnIgnore,
     on_unannotated_required_args: RaiseWarnReturnIgnore,
+    guess_self: bool = True,
 ) -> Optional[Signature]:
     """Helper function for user warnings/errors during inject_dependencies.
 
@@ -218,7 +249,10 @@ def _resolve_sig_or_inform(
     """
     try:
         sig = type_resolved_signature(
-            func, localns=localns, raise_unresolved_optional_args=False
+            func,
+            localns=localns,
+            raise_unresolved_optional_args=False,
+            guess_self=guess_self,
         )
     except NameError as e:
         errmsg = str(e)
