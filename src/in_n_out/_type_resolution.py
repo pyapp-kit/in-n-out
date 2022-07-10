@@ -149,7 +149,7 @@ def type_resolved_signature(
     """
     sig = Signature.from_callable(func)
     hints = {}
-    if guess_self:
+    if guess_self and sig.parameters:
         p0 = next(iter(sig.parameters.values()))
         # The best identifier i can figure for a class method is that:
         # 1. its qualname contains a period (e.g. "MyClass.my_method"),
