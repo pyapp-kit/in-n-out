@@ -203,6 +203,7 @@ class Store:
         self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
         self.on_unresolved_required_args: RaiseWarnReturnIgnore = "raise"
         self.on_unannotated_required_args: RaiseWarnReturnIgnore = "warn"
+        self.guess_self: bool = True
 
     @property
     def name(self) -> str:
@@ -585,6 +586,7 @@ class Store:
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        guess_self: Optional[bool] = None,
     ) -> Callable[P, R]:
         ...
 
@@ -598,6 +600,7 @@ class Store:
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        guess_self: Optional[bool] = None,
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
         ...
 
@@ -610,6 +613,7 @@ class Store:
         localns: Optional[dict] = None,
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+        guess_self: Optional[bool] = None,
     ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
         """Decorate `func` to inject dependencies at calltime.
 
@@ -661,6 +665,20 @@ class Store:
                 - 'return': immediately return the original function without warning
                 - 'ignore': continue decorating without warning.
 
+        guess_self : bool
+            Whether to infer the type of the first argument if the function is an
+            unbound class method (by default, `True`) This is done as follows:
+
+                - if '.' (but not '<locals>') is in the function's __qualname__
+                - and if the first parameter is named 'self' or starts with "_"
+                - and if the first parameter annotation is `inspect.empty`
+                - then the name preceding `func.__name__` in the function's __qualname__
+                (which is usually the class name), is looked up in the function's
+                `__globals__` namespace. If found, it is used as the first parameter's
+                type annotation.
+
+            This allows class methods to be injected with instances of the class.
+
         Returns
         -------
         Callable
@@ -691,6 +709,7 @@ class Store:
         """
         on_unres = on_unresolved_required_args or self.on_unresolved_required_args
         on_unann = on_unannotated_required_args or self.on_unannotated_required_args
+        _guess_self = guess_self or self.guess_self
 
         # inner decorator, allows for optional decorator arguments
         def _inner(func: Callable[P, R]) -> Callable[P, R]:
@@ -716,6 +735,7 @@ class Store:
                 localns={**self.namespace, **(localns or {})},
                 on_unresolved_required_args=on_unres,
                 on_unannotated_required_args=on_unann,
+                guess_self=_guess_self,
             )
             if sig is None:  # something went wrong, and the user was notified.
                 return func

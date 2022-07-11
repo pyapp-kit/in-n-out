@@ -208,6 +208,7 @@ def inject(
     localns: Optional[dict] = None,
     on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+    guess_self: Optional[bool] = None,
     store: Union[str, Store, None] = None,
 ) -> Callable[P, R]:
     ...
@@ -222,6 +223,7 @@ def inject(
     localns: Optional[dict] = None,
     on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+    guess_self: Optional[bool] = None,
     store: Union[str, Store, None] = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     ...
@@ -236,6 +238,7 @@ def inject(
     localns: Optional[dict] = None,
     on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
+    guess_self: Optional[bool] = None,
     store: Union[str, Store, None] = None,
 ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
     return _store_or_global(store).inject(
@@ -245,6 +248,7 @@ def inject(
         localns=localns,
         on_unresolved_required_args=on_unresolved_required_args,
         on_unannotated_required_args=on_unannotated_required_args,
+        guess_self=guess_self,
     )
 
 
