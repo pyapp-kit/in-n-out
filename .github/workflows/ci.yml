@@ -183,6 +183,9 @@ jobs:
           python -m build
           twine check dist/*
           ls -lh dist
+        env:
+          SKIP_CYTHON: 1
+
       - name: Build and publish
         run: twine upload dist/*
         env:
