@@ -1,10 +1,11 @@
 from contextlib import nullcontext
-from typing import ContextManager, Optional
+from inspect import isgeneratorfunction
+from typing import ContextManager, Generator, Optional
 from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, inject, inject_processors, register
+from in_n_out import Store, _compiled, inject, inject_processors, register
 
 
 def test_injection():
@@ -216,3 +217,23 @@ def test_inject_instance_into_unbound_method():
     foo = Foo()
     with register(providers={Foo: lambda: foo}):
         assert inject(Foo.method)() == foo
+
+
+# https://github.com/cython/cython/issues/4888
+@pytest.mark.xfail(bool(_compiled), reason="Cython doesn't support this", strict=True)
+def test_generators():
+    def generator_func() -> Generator:
+        yield 1
+        yield 2
+        yield 3
+
+    assert isgeneratorfunction(generator_func)
+    assert list(generator_func()) == [1, 2, 3]
+
+    injected = inject(generator_func)
+
+    assert isgeneratorfunction(injected)
+    assert list(injected()) == [1, 2, 3]
+
+    with pytest.raises(TypeError, match="generator function"):
+        inject(generator_func, processors=True)
