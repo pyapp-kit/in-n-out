@@ -1,5 +1,6 @@
 from contextlib import nullcontext
-from typing import ContextManager, Optional
+from inspect import isgeneratorfunction
+from typing import ContextManager, Generator, Optional
 from unittest.mock import Mock
 
 import pytest
@@ -216,3 +217,18 @@ def test_inject_instance_into_unbound_method():
     foo = Foo()
     with register(providers={Foo: lambda: foo}):
         assert inject(Foo.method)() == foo
+
+
+def test_generators():
+    def generator_func() -> Generator:
+        yield 1
+        yield 2
+        yield 3
+
+    assert isgeneratorfunction(generator_func)
+    assert list(generator_func()) == [1, 2, 3]
+
+    injected = inject(generator_func)
+
+    assert isgeneratorfunction(injected)
+    assert list(injected()) == [1, 2, 3]
