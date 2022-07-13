@@ -234,3 +234,6 @@ def test_generators():
 
     assert isgeneratorfunction(injected)
     assert list(injected()) == [1, 2, 3]
+
+    with pytest.raises(TypeError, match="generator function"):
+        inject(generator_func, processors=True)

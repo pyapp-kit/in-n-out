@@ -867,6 +867,11 @@ class Store:
         """
 
         def _deco(func: Callable[P, R]) -> Callable[P, R]:
+            if isgeneratorfunction(func):
+                raise TypeError(
+                    "Cannot decorate a generator function with inject_processors"
+                )
+
             nonlocal type_hint
             if type_hint is None:
                 annotations = getattr(func, "__annotations__", {})
