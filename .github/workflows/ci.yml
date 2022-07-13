@@ -60,7 +60,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         python-version: ["3.8", "3.9", "3.10"]
         platform: ["ubuntu-latest"]
