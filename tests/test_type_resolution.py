@@ -98,3 +98,20 @@ def test_curry_resolution() -> None:
     ppf = pf(z=["hi"])
 
     assert resolve_type_hints(ppf) == {"x": int, "y": str, "z": list}
+
+
+def test_wrapped_resolution() -> None:
+    from functools import wraps
+
+    def func(x: int, y: str, z: list):
+        ...
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    @wraps(wrapper)
+    def wrapper2(*args, **kwargs):
+        return wrapper(*args, **kwargs)
+
+    assert resolve_type_hints(wrapper2) == {"x": int, "y": str, "z": list}

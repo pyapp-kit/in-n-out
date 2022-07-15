@@ -5,7 +5,7 @@ import types
 import warnings
 import weakref
 from functools import cached_property, wraps
-from inspect import CO_VARARGS, isgeneratorfunction
+from inspect import CO_VARARGS, isgeneratorfunction, unwrap
 from types import CodeType
 from typing import (
     TYPE_CHECKING,
@@ -719,7 +719,7 @@ class Store:
                 return self.inject_processors(func) if processors else func
 
             # bail if there aren't any annotations at all
-            code: Optional[CodeType] = getattr(func, "__code__", None)
+            code: Optional[CodeType] = getattr(unwrap(func), "__code__", None)
             if (code and not code.co_argcount) and "return" not in getattr(
                 func, "__annotations__", {}
             ):
