@@ -1,3 +1,4 @@
+import functools
 from contextlib import nullcontext
 from inspect import isgeneratorfunction
 from typing import ContextManager, Generator, Optional
@@ -237,3 +238,22 @@ def test_generators():
 
     with pytest.raises(TypeError, match="generator function"):
         inject(generator_func, processors=True)
+
+
+def test_wrapped_functions():
+    def func(foo: Foo):
+        return foo
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    @functools.wraps(wrapper)
+    def wrapper2(*args, **kwargs):
+        return wrapper(*args, **kwargs)
+
+    injected = inject(wrapper2)
+
+    foo = Foo()
+    with register(providers={Foo: lambda: foo}):
+        assert injected() == foo
