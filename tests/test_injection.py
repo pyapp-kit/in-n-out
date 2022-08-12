@@ -261,6 +261,8 @@ def test_partial_annotations():
     with pytest.warns(UserWarning):
         injected = inject(func)
 
+    injected = inject(func, on_unresolved_required_args="ignore")
+
     foo = Foo()
     with register(providers={Foo: lambda: foo}):
-        assert injected(bar=2) == (foo, 2)
+        assert injected(bar=2) == (foo, 2)  # type: ignore
