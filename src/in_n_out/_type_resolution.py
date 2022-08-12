@@ -277,7 +277,7 @@ def _resolve_sig_or_inform(
 
     for param in sig.parameters.values():
         if param.default is not param.empty:
-            continue
+            continue  # pragma: no cover
         if isinstance(param.annotation, (str, ForwardRef)):
             errmsg = (
                 f"Could not resolve type hint for required parameter {param.name!r}"
