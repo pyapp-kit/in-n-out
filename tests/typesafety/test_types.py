@@ -7,6 +7,8 @@ Use the following "assertion" comments
 # E: <msg> - we expect a mypy error message
 # R: <msg> - we expect a mypy note message Revealed type is '<msg>'
 """
+import os
+
 import pytest
 
 # flake8: noqa
@@ -16,6 +18,7 @@ from typing_extensions import reveal_type
 import in_n_out as ino
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="skip on windows")
 @pytest.mark.mypy_testing
 def mypy_test_injection() -> None:
 
@@ -39,6 +42,7 @@ def mypy_test_injection() -> None:
     injected(1, 2)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="skip on windows")
 @pytest.mark.mypy_testing
 def mypy_test_provider() -> None:
     store = ino.Store('name')
@@ -66,6 +70,7 @@ def mypy_test_provider() -> None:
     reveal_type(outfunc2)  # R: def () -> builtins.int
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="skip on windows")
 @pytest.mark.mypy_testing
 def mypy_test_processor() -> None:
     store = ino.Store('name')
