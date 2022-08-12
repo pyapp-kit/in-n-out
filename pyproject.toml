@@ -158,6 +158,7 @@ ignore = [
     "codecov.yml",
     "asv.conf.json",
     "benchmarks/**/*",
+    "CHANGELOG.md",
 ]
 
 # https://python-semantic-release.readthedocs.io/en/latest/configuration.html
