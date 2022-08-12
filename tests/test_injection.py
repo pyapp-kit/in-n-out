@@ -111,11 +111,11 @@ def test_injection_without_args():
 modes = ["raise", "warn", "return", "ignore"]
 
 
-def unknown(v: "Unknown") -> int:  # type: ignore  # noqa
+def unannotated(x) -> int:  # type: ignore  # noqa
     ...
 
 
-def unannotated(x) -> int:  # type: ignore  # noqa
+def unknown(v: "Unknown") -> int:  # type: ignore  # noqa
     ...
 
 
@@ -129,47 +129,42 @@ def unknown_and_unannotated(v: "Unknown", x) -> int:  # type: ignore  # noqa
 def test_injection_errors(in_func, on_unresolved, on_unannotated):
 
     ctx: ContextManager = nullcontext()
+    ctxb: ContextManager = nullcontext()
     expect_same_func_back = False
 
-    if "unknown" in in_func.__name__:  # required params with unknown annotations
+    UNANNOTATED_MSG = "Injecting dependencies .* with a required, unannotated param"
+
+    if "unknown" in in_func.__name__ and on_unresolved != "ignore":
+        # required params with unknown annotations
+        UNRESOLVED_MSG = "Could not resolve type hint for required parameter"
+
         if on_unresolved == "raise":
-            ctx = pytest.raises(
-                NameError,
-                match="Could not resolve type hint for required parameter",
-            )
+            ctx = pytest.raises(NameError, match=UNRESOLVED_MSG)
+        elif on_unresolved == "warn":
+            ctx = pytest.warns(UserWarning, match=UNRESOLVED_MSG)
+            if "unannotated" in in_func.__name__:
+                if on_unannotated == "raise":
+                    ctxb = pytest.raises(TypeError, match=UNANNOTATED_MSG)
+                elif on_unannotated == "return":
+                    expect_same_func_back = True
         else:
             expect_same_func_back = True
-            if on_unresolved == "warn":
-                ctx = pytest.warns(
-                    UserWarning,
-                    match="Could not resolve type hint for required parameter",
-                )
 
     elif "unannotated" in in_func.__name__:  # required params without annotations
         if on_unannotated == "raise":
-            ctx = pytest.raises(
-                TypeError,
-                match="Injecting dependencies .* with a required, unannotated param",
-            )
+            ctx = pytest.raises(TypeError, match=UNANNOTATED_MSG)
         elif on_unannotated == "warn":
-            ctx = pytest.warns(
-                UserWarning,
-                match="Injecting dependencies .* with a required, unannotated param",
-            )
+            ctx = pytest.warns(UserWarning, match=UNANNOTATED_MSG)
         elif on_unannotated == "return":
             expect_same_func_back = True
 
-    with ctx:
+    with ctx, ctxb:
         out_func = inject(
             in_func,
             on_unannotated_required_args=on_unannotated,
             on_unresolved_required_args=on_unresolved,
         )
-
-        if expect_same_func_back:
-            assert out_func is in_func
-        else:
-            assert out_func is not in_func
+        assert (out_func is in_func) is expect_same_func_back
 
 
 def test_processors_not_passed_none(test_store: Store):
@@ -257,3 +252,17 @@ def test_wrapped_functions():
     foo = Foo()
     with register(providers={Foo: lambda: foo}):
         assert injected() == foo
+
+
+def test_partial_annotations():
+    def func(foo: Foo, bar: "Bar"):  # noqa
+        return foo, bar
+
+    with pytest.warns(UserWarning):
+        injected = inject(func)
+
+    injected = inject(func, on_unresolved_required_args="ignore")
+
+    foo = Foo()
+    with register(providers={Foo: lambda: foo}):
+        assert injected(bar=2) == (foo, 2)  # type: ignore

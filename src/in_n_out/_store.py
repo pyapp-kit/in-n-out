@@ -207,7 +207,7 @@ class Store:
         self._providers: List[_RegisteredCallback] = []
         self._processors: List[_RegisteredCallback] = []
         self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
-        self.on_unresolved_required_args: RaiseWarnReturnIgnore = "raise"
+        self.on_unresolved_required_args: RaiseWarnReturnIgnore = "warn"
         self.on_unannotated_required_args: RaiseWarnReturnIgnore = "warn"
         self.guess_self: bool = True
 
@@ -655,13 +655,13 @@ class Store:
         on_unresolved_required_args : RaiseWarnReturnIgnore
             What to do when a required parameter (one without a default) is encountered
             with an unresolvable type annotation.
-            Must be one of the following (by default 'raise'):
+            Must be one of the following (by default 'warn'):
 
                 - 'raise': immediately raise an exception
                 - 'warn': warn and return the original function
                 - 'return': return the original function without warning
-                - 'ignore': currently an alias for `return`, but will be used in
-                the future to allow the decorator to proceed.
+                - 'ignore': continue decorating without warning (at call time, this
+                    function will fail without additional arguments).
 
         on_unannotated_required_args : RaiseWarnReturnIgnore
             What to do when a required parameter (one without a default) is encountered
