@@ -6,7 +6,7 @@ import typing
 import warnings
 from functools import lru_cache, partial
 from inspect import Signature
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, ForwardRef, Optional, Tuple, Type
 
 try:
     from toolz import curry
@@ -108,6 +108,7 @@ def type_resolved_signature(
     *,
     localns: Optional[dict] = None,
     raise_unresolved_optional_args: bool = True,
+    raise_unresolved_required_args: bool = True,
     guess_self: bool = True,
 ) -> Signature:
     """Return a Signature object for a function with resolved type annotations.
@@ -121,6 +122,9 @@ def type_resolved_signature(
     raise_unresolved_optional_args : bool
         Whether to raise an exception when an optional parameter (one with a default
         value) has an unresolvable type annotation, by default True
+    raise_unresolved_required_args : bool
+        Whether to raise an exception when a required parameter has an unresolvable
+        type annotation, by default True
     guess_self : bool
         Whether to infer the type of the first argument if the function is an unbound
         class method. This is done as follows:
@@ -178,7 +182,9 @@ def type_resolved_signature(
                 "To allow optional parameters and return types to remain unresolved, "
                 "use `raise_unresolved_optional_args=False`"
             ) from err
-        hints = _resolve_mandatory_params(sig)
+        hints = _resolve_params_one_by_one(
+            sig, exclude_unresolved_mandatory=not raise_unresolved_required_args
+        )
 
     resolved_parameters = [
         param.replace(annotation=hints.get(param.name, param.empty))
@@ -190,9 +196,10 @@ def type_resolved_signature(
     )
 
 
-def _resolve_mandatory_params(
+def _resolve_params_one_by_one(
     sig: Signature,
     exclude_unresolved_optionals: bool = False,
+    exclude_unresolved_mandatory: bool = False,
 ) -> Dict[str, Any]:
     """Resolve all required param annotations in `sig`, but allow optional ones to fail.
 
@@ -201,8 +208,16 @@ def _resolve_mandatory_params(
     It resolves each parameter's type annotation independently, and only raises an
     error if a parameter without a default value has an unresolvable type annotation.
 
-    If `exclude_unresolved_optionals` is `True`, then unresolved optional parameters
-    will not appear in the output dict
+    Parameters
+    ----------
+    sig : Signature
+        :class:`inspect.Signature` object with unresolved type annotations.
+    exclude_unresolved_optionals : bool
+        Whether to exclude parameters with unresolved type annotations that have a
+        default value, by default False
+    exclude_unresolved_mandatory : bool
+        Whether to exclude parameters with unresolved type annotations that do not
+        have a default value, by default False
 
     Returns
     -------
@@ -221,12 +236,17 @@ def _resolve_mandatory_params(
         try:
             hints[name] = resolve_single_type_hints(param.annotation)[0]
         except NameError as e:
-            if param.default is param.empty:
+            if (
+                param.default is param.empty
+                and exclude_unresolved_mandatory
+                or param.default is not param.empty
+                and not exclude_unresolved_optionals
+            ):
+                hints[name] = param.annotation
+            elif param.default is param.empty:
                 raise NameError(
                     f"Could not resolve type hint for required parameter {name!r}: {e}"
                 ) from e
-            elif not exclude_unresolved_optionals:
-                hints[name] = param.annotation
     if sig.return_annotation is not sig.empty:
         try:
             hints["return"] = resolve_single_type_hints(sig.return_annotation)[0]
@@ -247,32 +267,37 @@ def _resolve_sig_or_inform(
 
     all parameters are described above in inject_dependencies
     """
-    try:
-        sig = type_resolved_signature(
-            func,
-            localns=localns,
-            raise_unresolved_optional_args=False,
-            guess_self=guess_self,
-        )
-    except NameError as e:
-        errmsg = str(e)
-        if on_unresolved_required_args == "raise":
-            msg = (
-                f"{errmsg}. To simply return the original function, pass `on_un"
-                'resolved_required_args="return"`. To emit a warning, pass "warn".'
-            )
-            raise NameError(msg) from e
-        if on_unresolved_required_args == "warn":
-            msg = (
-                f"{errmsg}. To suppress this warning and simply return the original "
-                'function, pass `on_unresolved_required_args="return"`.'
-            )
-
-            warnings.warn(msg, UserWarning, stacklevel=2)
-        return None
+    sig = type_resolved_signature(
+        func,
+        localns=localns,
+        raise_unresolved_optional_args=False,
+        raise_unresolved_required_args=False,
+        guess_self=guess_self,
+    )
 
     for param in sig.parameters.values():
-        if param.default is param.empty and param.annotation is param.empty:
+        if param.default is not param.empty:
+            continue
+        if isinstance(param.annotation, (str, ForwardRef)):
+            errmsg = (
+                f"Could not resolve type hint for required parameter {param.name!r}"
+            )
+            if on_unresolved_required_args == "raise":
+                msg = (
+                    f"{errmsg}. To simply return the original function, pass `on_un"
+                    'annotated_required_args="return"`. To emit a warning, pass "warn".'
+                )
+                raise NameError(msg)
+            elif on_unresolved_required_args == "warn":
+                msg = (
+                    f"{errmsg}. To suppress this warning and simply return the original"
+                    ' function, pass `on_unannotated_required_args="return"`.'
+                )
+                warnings.warn(msg, UserWarning, stacklevel=2)
+            elif on_unresolved_required_args == "return":
+                return None
+
+        elif param.annotation is param.empty:
             fname = (getattr(func, "__name__", ""),)
             name = param.name
             base = (
