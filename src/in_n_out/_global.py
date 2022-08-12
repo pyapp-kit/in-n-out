@@ -14,19 +14,20 @@ from typing import (
     overload,
 )
 
-from ._store import (
-    CallbackIterable,
-    InjectionContext,
-    Processor,
-    ProcessorVar,
-    Provider,
-    ProviderVar,
-    Store,
-    T,
-)
+from ._store import InjectionContext, Store
 
 if TYPE_CHECKING:
-    from ._store import P, R
+    from ._store import (
+        P,
+        Processor,
+        ProcessorIterable,
+        ProcessorVar,
+        Provider,
+        ProviderIterable,
+        ProviderVar,
+        R,
+        T,
+    )
     from ._type_resolution import RaiseWarnReturnIgnore
 
 _STORE_PARAM = """
@@ -59,8 +60,8 @@ def _store_or_global(store: Union[str, Store, None] = None) -> Store:
 @_add_store_to_doc
 def register(
     *,
-    processors: Optional[CallbackIterable] = None,
-    providers: Optional[CallbackIterable] = None,
+    processors: Optional[ProcessorIterable] = None,
+    providers: Optional[ProviderIterable] = None,
     store: Union[str, Store, None] = None,
 ) -> InjectionContext:
     return _store_or_global(store).register(providers=providers, processors=processors)
@@ -210,8 +211,11 @@ def inject(
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
     guess_self: Optional[bool] = None,
     store: Union[str, Store, None] = None,
-) -> Callable[P, R]:
+) -> Callable[..., R]:
     ...
+    # unfortunately, the best we can do is convert the signature to Callabe[..., R]
+    # so we lose the parameter information.  but it seems better than having
+    # "missing positional args" errors everywhere on injected functions.
 
 
 @overload
@@ -225,7 +229,7 @@ def inject(
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
     guess_self: Optional[bool] = None,
     store: Union[str, Store, None] = None,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
+) -> Callable[[Callable[P, R]], Callable[..., R]]:
     ...
 
 
@@ -240,7 +244,7 @@ def inject(
     on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
     guess_self: Optional[bool] = None,
     store: Union[str, Store, None] = None,
-) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
+) -> Union[Callable[..., R], Callable[[Callable[P, R]], Callable[..., R]]]:
     return _store_or_global(store).inject(
         func=func,
         providers=providers,

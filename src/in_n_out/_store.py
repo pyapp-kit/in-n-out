@@ -58,12 +58,18 @@ Weight = float
 # (callback,)
 # (callback, type_hint)
 # (callback, type_hint, weight)
-CallbackTuple = Union[
-    Tuple[PPCallback], Tuple[PPCallback, HintArg], Tuple[PPCallback, HintArg, Weight]
+ProviderTuple = Union[
+    Tuple[Provider], Tuple[Provider, HintArg], Tuple[Provider, HintArg, Weight]
 ]
-# All of the valid argument that can be passed to register()
-CallbackIterable = Union[Iterable[CallbackTuple], Mapping[HintArg, PPCallback]]
+ProcessorTuple = Union[
+    Tuple[Processor], Tuple[Processor, HintArg], Tuple[Processor, HintArg, Weight]
+]
+CallbackTuple = Union[ProviderTuple, ProcessorTuple]
 
+# All of the valid argument that can be passed to register()
+ProviderIterable = Union[Iterable[ProviderTuple], Mapping[HintArg, Provider]]
+ProcessorIterable = Union[Iterable[ProcessorTuple], Mapping[HintArg, Processor]]
+CallbackIterable = Union[ProviderIterable, ProcessorIterable]
 
 _GLOBAL = "global"
 
@@ -95,8 +101,8 @@ class InjectionContext(ContextManager):
         self,
         store: Store,
         *,
-        providers: Optional[CallbackIterable] = None,
-        processors: Optional[CallbackIterable] = None,
+        providers: Optional[ProviderIterable] = None,
+        processors: Optional[ProcessorIterable] = None,
     ) -> None:
         self._disposers = []
         if providers is not None:
@@ -240,8 +246,8 @@ class Store:
     def register(
         self,
         *,
-        providers: Optional[CallbackIterable] = None,
-        processors: Optional[CallbackIterable] = None,
+        providers: Optional[ProviderIterable] = None,
+        processors: Optional[ProcessorIterable] = None,
     ) -> InjectionContext:
         """Register multiple providers and/or processors at once.
 
@@ -587,8 +593,11 @@ class Store:
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
         guess_self: Optional[bool] = None,
-    ) -> Callable[P, R]:
+    ) -> Callable[..., R]:
         ...
+        # unfortunately, the best we can do is convert the signature to Callabe[..., R]
+        # so we lose the parameter information.  but it seems better than having
+        # "missing positional args" errors everywhere on injected functions.
 
     @overload
     def inject(
@@ -601,7 +610,7 @@ class Store:
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
         guess_self: Optional[bool] = None,
-    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
+    ) -> Callable[[Callable[P, R]], Callable[..., R]]:
         ...
 
     def inject(
@@ -614,7 +623,7 @@ class Store:
         on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
         on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
         guess_self: Optional[bool] = None,
-    ) -> Union[Callable[P, R], Callable[[Callable[P, R]], Callable[P, R]]]:
+    ) -> Union[Callable[..., R], Callable[[Callable[P, R]], Callable[..., R]]]:
         """Decorate `func` to inject dependencies at calltime.
 
         Assuming `providers` is True (the default), this will attempt retrieve
@@ -988,7 +997,7 @@ class Store:
 
         _callbacks: Iterable[CallbackTuple]
         if isinstance(callbacks, Mapping):
-            _callbacks = ((v, k) for k, v in callbacks.items())
+            _callbacks = ((v, k) for k, v in callbacks.items())  # type: ignore  # dunno
         else:
             _callbacks = callbacks
 
