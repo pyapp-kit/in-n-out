@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/tlambert03/in-n-out/tree/0.1.5) (2022-08-14)
+
+[Full Changelog](https://github.com/tlambert03/in-n-out/compare/v0.1.4...0.1.5)
+
+**Fixed bugs:**
+
+- fix: pass namespace through all type resolution functions [\#35](https://github.com/tlambert03/in-n-out/pull/35) ([tlambert03](https://github.com/tlambert03))
+
 ## [v0.1.4](https://github.com/tlambert03/in-n-out/tree/v0.1.4) (2022-08-12)
 
 [Full Changelog](https://github.com/tlambert03/in-n-out/compare/v0.1.3...v0.1.4)
@@ -11,6 +19,10 @@
 **Tests & CI:**
 
 - test: add typing tests [\#29](https://github.com/tlambert03/in-n-out/pull/29) ([tlambert03](https://github.com/tlambert03))
+
+**Merged pull requests:**
+
+- chore: changelog v0.1.4 [\#34](https://github.com/tlambert03/in-n-out/pull/34) ([tlambert03](https://github.com/tlambert03))
 
 ## [v0.1.3](https://github.com/tlambert03/in-n-out/tree/v0.1.3) (2022-07-15)
 
