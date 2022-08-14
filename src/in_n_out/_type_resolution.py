@@ -183,7 +183,9 @@ def type_resolved_signature(
                 "use `raise_unresolved_optional_args=False`"
             ) from err
         hints = _resolve_params_one_by_one(
-            sig, exclude_unresolved_mandatory=not raise_unresolved_required_args
+            sig,
+            localns=localns,
+            exclude_unresolved_mandatory=not raise_unresolved_required_args,
         )
 
     resolved_parameters = [
@@ -198,6 +200,7 @@ def type_resolved_signature(
 
 def _resolve_params_one_by_one(
     sig: Signature,
+    localns: Optional[dict] = None,
     exclude_unresolved_optionals: bool = False,
     exclude_unresolved_mandatory: bool = False,
 ) -> Dict[str, Any]:
@@ -212,6 +215,8 @@ def _resolve_params_one_by_one(
     ----------
     sig : Signature
         :class:`inspect.Signature` object with unresolved type annotations.
+    localns : Optional[dict]
+        Optional local namespace for name resolution, by default None
     exclude_unresolved_optionals : bool
         Whether to exclude parameters with unresolved type annotations that have a
         default value, by default False
@@ -234,7 +239,9 @@ def _resolve_params_one_by_one(
         if param.annotation is sig.empty:
             continue  # pragma: no cover
         try:
-            hints[name] = resolve_single_type_hints(param.annotation)[0]
+            hints[name] = resolve_single_type_hints(param.annotation, localns=localns)[
+                0
+            ]
         except NameError as e:
             if (
                 param.default is param.empty
@@ -249,7 +256,9 @@ def _resolve_params_one_by_one(
                 ) from e
     if sig.return_annotation is not sig.empty:
         try:
-            hints["return"] = resolve_single_type_hints(sig.return_annotation)[0]
+            hints["return"] = resolve_single_type_hints(
+                sig.return_annotation, localns=localns
+            )[0]
         except NameError:
             if not exclude_unresolved_optionals:
                 hints["return"] = sig.return_annotation

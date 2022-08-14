@@ -776,9 +776,7 @@ class Store:
                     # likely a required argument is still missing.
                     # show what was injected and raise
                     _argnames = (
-                        f"arguments: {', '.join(set(_kwargs))}"
-                        if _kwargs
-                        else "NO arguments"
+                        f"arguments: {set(_kwargs)!r}" if _kwargs else "NO arguments"
                     )
                     raise TypeError(
                         f"After injecting dependencies for {_argnames}, {e}"
