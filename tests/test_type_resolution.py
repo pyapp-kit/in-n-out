@@ -8,6 +8,7 @@ from in_n_out import (
     resolve_type_hints,
     type_resolved_signature,
 )
+from in_n_out._type_resolution import _resolve_sig_or_inform
 
 
 def basic_sig(a: "int", b: "str", c: "Optional[float]" = None) -> int:
@@ -115,3 +116,37 @@ def test_wrapped_resolution() -> None:
         return wrapper(*args, **kwargs)
 
     assert resolve_type_hints(wrapper2) == {"x": int, "y": str, "z": list}
+
+
+def test_resolve_sig_or_inform():
+    """Make sure we can partially resolve annotations."""
+
+    class Foo:
+        ...
+
+    def func(foo: "Foo", bar: "Bar"):  # noqa
+        return foo, bar
+
+    sig = _resolve_sig_or_inform(
+        func,
+        localns={"Foo": Foo},
+        on_unresolved_required_args="ignore",
+        on_unannotated_required_args="ignore",
+    )
+
+    assert sig.parameters["foo"].annotation == Foo
+    assert sig.parameters["bar"].annotation == "Bar"
+
+    # other way around
+    def func2(bar: "Bar", foo: "Foo"):  # noqa
+        return foo, bar
+
+    sig2 = _resolve_sig_or_inform(
+        func2,
+        localns={"Foo": Foo},
+        on_unresolved_required_args="ignore",
+        on_unannotated_required_args="ignore",
+    )
+
+    assert sig2.parameters["foo"].annotation == Foo
+    assert sig2.parameters["bar"].annotation == "Bar"

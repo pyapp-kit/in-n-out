@@ -254,15 +254,22 @@ def test_wrapped_functions():
         assert injected() == foo
 
 
-def test_partial_annotations():
-    def func(foo: Foo, bar: "Bar"):  # noqa
+def test_partial_annotations(test_store: Store):
+    def func(foo: "Foo", bar: "Bar"):  # noqa
+        return foo, bar
+
+    # other way around
+    def func2(bar: "Bar", foo: "Foo"):  # noqa
         return foo, bar
 
     with pytest.warns(UserWarning):
-        injected = inject(func)
+        injected = test_store.inject(func)
 
-    injected = inject(func, on_unresolved_required_args="ignore")
+    test_store.namespace = {"Foo": Foo}
+    injected = test_store.inject(func, on_unresolved_required_args="ignore")
+    injected2 = test_store.inject(func2, on_unresolved_required_args="ignore")
 
     foo = Foo()
-    with register(providers={Foo: lambda: foo}):
+    with test_store.register(providers={Foo: lambda: foo}):
         assert injected(bar=2) == (foo, 2)  # type: ignore
+        assert injected2(2) == (foo, 2)  # type: ignore
