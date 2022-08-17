@@ -767,12 +767,13 @@ class Store:
                 # if desired. (i.e. the injected deps are only used if not provided)
                 bound = _sig.bind_partial(*args, **kwargs)
                 bound.apply_defaults()
-                _kwargs.update(**bound.arguments)
 
                 # call the function with injected values
                 try:
-                    result = func(**_kwargs)
+                    result = func(**{**_kwargs, **bound.arguments})
                 except TypeError as e:
+                    if "missing" not in e.args[0]:
+                        raise
                     # likely a required argument is still missing.
                     # show what was injected and raise
                     _argnames = (
