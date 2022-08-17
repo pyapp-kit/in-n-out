@@ -773,7 +773,7 @@ class Store:
                     result = func(**{**_kwargs, **bound.arguments})
                 except TypeError as e:
                     if "missing" not in e.args[0]:
-                        raise
+                        raise  # pragma: no cover
                     # likely a required argument is still missing.
                     # show what was injected and raise
                     _argnames = (
