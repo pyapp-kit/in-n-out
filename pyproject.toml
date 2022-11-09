@@ -1,6 +1,11 @@
 # https://peps.python.org/pep-0517/
 [build-system]
-requires = ["setuptools>=45", "wheel", "setuptools-scm>=6.2", "Cython==3.0a10"]
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "setuptools-scm>=6.2",
+    "Cython==3.0.0a11",
+]
 build-backend = "setuptools.build_meta"
 
 # https://peps.python.org/pep-0621/
@@ -26,7 +31,7 @@ dependencies = []
 # extras
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies
 [project.optional-dependencies]
-test = ["pytest>=6.0", "pytest-cov", "pytest-mypy-testing", "toolz"]
+test = ["pytest>=6.0", "pytest-cov", "toolz"]
 dev = [
     "black",
     "cruft",
@@ -46,7 +51,7 @@ dev = [
     "pytest",
     "rich",
 ]
-build = ["Cython==3.0a10;sys_platform != 'win32'"]
+build = ["Cython==3.0.0a11;sys_platform != 'win32'"]
 
 [project.urls]
 homepage = "https://github.com/napari/in-n-out"
