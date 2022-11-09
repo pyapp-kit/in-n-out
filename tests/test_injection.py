@@ -216,7 +216,7 @@ def test_inject_instance_into_unbound_method():
 
 
 # https://github.com/cython/cython/issues/4888
-@pytest.mark.xfail(bool(_compiled), reason="Cython doesn't support this", strict=True)
+@pytest.mark.xfail(bool(_compiled), reason="Cython doesn't support this")
 def test_generators():
     def generator_func() -> Generator:
         yield 1
