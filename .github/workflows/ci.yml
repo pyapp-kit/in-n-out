@@ -129,7 +129,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install -U pip
-          python -m pip install -e in-n-out[testing]
+          python -m pip install -e in-n-out[test]
           python -m pip install -e app-model[qt,test,test_qt]
           python -m pip install PyQt5
 
