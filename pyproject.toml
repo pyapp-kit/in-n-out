@@ -54,8 +54,8 @@ dev = [
 build = ["Cython==3.0.0a11;sys_platform != 'win32'"]
 
 [project.urls]
-homepage = "https://github.com/napari/in-n-out"
-repository = "https://github.com/napari/in-n-out"
+homepage = "https://github.com/pyapp-kit/in-n-out"
+repository = "https://github.com/pyapp-kit/in-n-out"
 
 # same as console_scripts entry point
 # [project.scripts]
