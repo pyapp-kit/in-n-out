@@ -72,3 +72,4 @@ Lots of other python DI frameworks exist, here are a few alternatives to conside
 - <https://github.com/alecthomas/injector>
 - <https://github.com/Finistere/antidote>
 - <https://github.com/dry-python/returns>
+- <https://github.com/adriangb/di>
