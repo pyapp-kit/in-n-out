@@ -1,18 +1,7 @@
 from __future__ import annotations
 
 from textwrap import indent
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Type,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, overload
 
 from ._store import InjectionContext, Store
 
@@ -39,7 +28,7 @@ _STORE_PARAM = indent(_STORE_PARAM.strip(), "        ")
 
 
 def _add_store_to_doc(func: T) -> T:
-    new_doc: List[str] = []
+    new_doc: list[str] = []
 
     store_doc: str = getattr(Store, func.__name__).__doc__  # type: ignore
     for n, line in enumerate(store_doc.splitlines()):
@@ -53,16 +42,16 @@ def _add_store_to_doc(func: T) -> T:
     return func
 
 
-def _store_or_global(store: Union[str, Store, None] = None) -> Store:
+def _store_or_global(store: str | Store | None = None) -> Store:
     return store if isinstance(store, Store) else Store.get_store(store)
 
 
 @_add_store_to_doc
 def register(
     *,
-    processors: Optional[ProcessorIterable] = None,
-    providers: Optional[ProviderIterable] = None,
-    store: Union[str, Store, None] = None,
+    processors: ProcessorIterable | None = None,
+    providers: ProviderIterable | None = None,
+    store: str | Store | None = None,
 ) -> InjectionContext:
     return _store_or_global(store).register(providers=providers, processors=processors)
 
@@ -70,9 +59,9 @@ def register(
 @_add_store_to_doc
 def register_provider(
     provider: Provider,
-    type_hint: Optional[object] = None,
+    type_hint: object | None = None,
     weight: float = 0,
-    store: Union[str, Store, None] = None,
+    store: str | Store | None = None,
 ) -> InjectionContext:
     return _store_or_global(store).register_provider(
         provider=provider, type_hint=type_hint, weight=weight
@@ -82,9 +71,9 @@ def register_provider(
 @_add_store_to_doc
 def register_processor(
     processor: Processor,
-    type_hint: Optional[object] = None,
+    type_hint: object | None = None,
     weight: float = 0,
-    store: Union[str, Store, None] = None,
+    store: str | Store | None = None,
 ) -> InjectionContext:
     return _store_or_global(store).register_processor(
         processor=processor, type_hint=type_hint, weight=weight
@@ -96,8 +85,8 @@ def mark_provider(
     func: ProviderVar,
     *,
     weight: float = 0,
-    type_hint: Optional[object] = None,
-    store: Union[str, Store, None] = None,
+    type_hint: object | None = None,
+    store: str | Store | None = None,
 ) -> ProviderVar:
     ...
 
@@ -107,20 +96,20 @@ def mark_provider(
     func: Literal[None] = ...,
     *,
     weight: float = 0,
-    type_hint: Optional[object] = None,
-    store: Union[str, Store, None] = None,
+    type_hint: object | None = None,
+    store: str | Store | None = None,
 ) -> Callable[[ProviderVar], ProviderVar]:
     ...
 
 
 @_add_store_to_doc
 def mark_provider(
-    func: Optional[ProviderVar] = None,
+    func: ProviderVar | None = None,
     *,
     weight: float = 0,
-    type_hint: Optional[object] = None,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
+    type_hint: object | None = None,
+    store: str | Store | None = None,
+) -> Callable[[ProviderVar], ProviderVar] | ProviderVar:
     return _store_or_global(store).mark_provider(
         func, weight=weight, type_hint=type_hint
     )
@@ -131,8 +120,8 @@ def mark_processor(
     func: ProcessorVar,
     *,
     weight: float = 0,
-    type_hint: Optional[object] = None,
-    store: Union[str, Store, None] = None,
+    type_hint: object | None = None,
+    store: str | Store | None = None,
 ) -> ProcessorVar:
     ...
 
@@ -142,20 +131,20 @@ def mark_processor(
     func: Literal[None] = ...,
     *,
     weight: float = 0,
-    type_hint: Optional[object] = None,
-    store: Union[str, Store, None] = None,
+    type_hint: object | None = None,
+    store: str | Store | None = None,
 ) -> Callable[[ProcessorVar], ProcessorVar]:
     ...
 
 
 @_add_store_to_doc
 def mark_processor(
-    func: Optional[ProcessorVar] = None,
+    func: ProcessorVar | None = None,
     *,
     weight: float = 0,
-    type_hint: Optional[object] = None,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[ProcessorVar], ProcessorVar], ProcessorVar]:
+    type_hint: object | None = None,
+    store: str | Store | None = None,
+) -> Callable[[ProcessorVar], ProcessorVar] | ProcessorVar:
     return _store_or_global(store).mark_processor(
         func, weight=weight, type_hint=type_hint
     )
@@ -163,23 +152,23 @@ def mark_processor(
 
 @_add_store_to_doc
 def iter_providers(
-    type_hint: Union[object, Type[T]], store: Union[str, Store, None] = None
-) -> Iterable[Callable[[], Optional[T]]]:
+    type_hint: object | type[T], store: str | Store | None = None
+) -> Iterable[Callable[[], T | None]]:
     return _store_or_global(store).iter_providers(type_hint)
 
 
 @_add_store_to_doc
 def iter_processors(
-    type_hint: Union[object, Type[T]], store: Union[str, Store, None] = None
+    type_hint: object | type[T], store: str | Store | None = None
 ) -> Iterable[Callable[[T], Any]]:
     return _store_or_global(store).iter_processors(type_hint)
 
 
 @_add_store_to_doc
 def provide(
-    type_hint: Union[object, Type[T]],
-    store: Union[str, Store, None] = None,
-) -> Optional[T]:
+    type_hint: object | type[T],
+    store: str | Store | None = None,
+) -> T | None:
     return _store_or_global(store).provide(type_hint=type_hint)
 
 
@@ -187,10 +176,10 @@ def provide(
 def process(
     result: Any,
     *,
-    type_hint: Union[object, Type[T], None] = None,
+    type_hint: object | type[T] | None = None,
     first_processor_only: bool = False,
     raise_exception: bool = False,
-    store: Union[str, Store, None] = None,
+    store: str | Store | None = None,
 ) -> None:
     return _store_or_global(store).process(
         result=result,
@@ -206,11 +195,11 @@ def inject(
     *,
     providers: bool = True,
     processors: bool = False,
-    localns: Optional[dict] = None,
-    on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    guess_self: Optional[bool] = None,
-    store: Union[str, Store, None] = None,
+    localns: dict | None = None,
+    on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
+    on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
+    guess_self: bool | None = None,
+    store: str | Store | None = None,
 ) -> Callable[..., R]:
     ...
     # unfortunately, the best we can do is convert the signature to Callabe[..., R]
@@ -224,27 +213,27 @@ def inject(
     *,
     providers: bool = True,
     processors: bool = False,
-    localns: Optional[dict] = None,
-    on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    guess_self: Optional[bool] = None,
-    store: Union[str, Store, None] = None,
+    localns: dict | None = None,
+    on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
+    on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
+    guess_self: bool | None = None,
+    store: str | Store | None = None,
 ) -> Callable[[Callable[P, R]], Callable[..., R]]:
     ...
 
 
 @_add_store_to_doc
 def inject(
-    func: Optional[Callable[P, R]] = None,
+    func: Callable[P, R] | None = None,
     *,
     providers: bool = True,
     processors: bool = False,
-    localns: Optional[dict] = None,
-    on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-    guess_self: Optional[bool] = None,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[..., R], Callable[[Callable[P, R]], Callable[..., R]]]:
+    localns: dict | None = None,
+    on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
+    on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
+    guess_self: bool | None = None,
+    store: str | Store | None = None,
+) -> Callable[..., R] | Callable[[Callable[P, R]], Callable[..., R]]:
     return _store_or_global(store).inject(
         func=func,
         providers=providers,
@@ -260,10 +249,10 @@ def inject(
 def inject_processors(
     func: Callable[P, R],
     *,
-    hint: Union[object, Type[T], None] = None,
+    hint: object | type[T] | None = None,
     first_processor_only: bool = False,
     raise_exception: bool = False,
-    store: Union[str, Store, None] = None,
+    store: str | Store | None = None,
 ) -> Callable[P, R]:
     ...
 
@@ -272,23 +261,23 @@ def inject_processors(
 def inject_processors(
     func: Literal[None] = None,
     *,
-    hint: Union[object, Type[T], None] = None,
+    hint: object | type[T] | None = None,
     first_processor_only: bool = False,
     raise_exception: bool = False,
-    store: Union[str, Store, None] = None,
+    store: str | Store | None = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]]:
     ...
 
 
 @_add_store_to_doc
 def inject_processors(
-    func: Optional[Callable[P, R]] = None,
+    func: Callable[P, R] | None = None,
     *,
-    hint: Union[object, Type[T], None] = None,
+    hint: object | type[T] | None = None,
     first_processor_only: bool = False,
     raise_exception: bool = False,
-    store: Union[str, Store, None] = None,
-) -> Union[Callable[[Callable[P, R]], Callable[P, R]], Callable[P, R]]:
+    store: str | Store | None = None,
+) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]:
     return _store_or_global(store).inject_processors(
         func=func,
         type_hint=hint,

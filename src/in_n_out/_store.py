@@ -12,15 +12,12 @@ from typing import (
     Any,
     Callable,
     ContextManager,
-    Dict,
     Iterable,
-    List,
     Literal,
     Mapping,
     NamedTuple,
     Optional,
     Tuple,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -87,8 +84,8 @@ class _RegisteredCallback(NamedTuple):
 
 
 class _CachedMap(NamedTuple):
-    all: Dict[object, List[Union[Processor, Provider]]]
-    subclassable: Dict[type, List[Union[Processor, Provider]]]
+    all: dict[object, list[Processor | Provider]]
+    subclassable: dict[type, list[Processor | Provider]]
 
 
 class InjectionContext(ContextManager):
@@ -101,8 +98,8 @@ class InjectionContext(ContextManager):
         self,
         store: Store,
         *,
-        providers: Optional[ProviderIterable] = None,
-        processors: Optional[ProcessorIterable] = None,
+        providers: ProviderIterable | None = None,
+        processors: ProcessorIterable | None = None,
     ) -> None:
         self._disposers = []
         if providers is not None:
@@ -124,7 +121,7 @@ class Store:
     """A Store is a collection of providers and processors."""
 
     _NULL = _NullSentinel()
-    _instances: Dict[str, Store] = {}
+    _instances: dict[str, Store] = {}
 
     @classmethod
     def create(cls, name: str) -> Store:
@@ -156,7 +153,7 @@ class Store:
         return cls._instances[name]
 
     @classmethod
-    def get_store(cls, name: Optional[str] = None) -> Store:
+    def get_store(cls, name: str | None = None) -> Store:
         """Get a Store instance with the given `name`.
 
         Parameters
@@ -204,9 +201,9 @@ class Store:
 
     def __init__(self, name: str) -> None:
         self._name = name
-        self._providers: List[_RegisteredCallback] = []
-        self._processors: List[_RegisteredCallback] = []
-        self._namespace: Union[Namespace, Callable[[], Namespace], None] = None
+        self._providers: list[_RegisteredCallback] = []
+        self._processors: list[_RegisteredCallback] = []
+        self._namespace: Namespace | Callable[[], Namespace] | None = None
         self.on_unresolved_required_args: RaiseWarnReturnIgnore = "warn"
         self.on_unannotated_required_args: RaiseWarnReturnIgnore = "warn"
         self.guess_self: bool = True
@@ -226,7 +223,7 @@ class Store:
             del self._cached_provider_map
 
     @property
-    def namespace(self) -> Dict[str, object]:
+    def namespace(self) -> dict[str, object]:
         """Return namespace for type resolution, if this store has one.
 
         If no namespace is set, this will return an empty `dict`.
@@ -238,7 +235,7 @@ class Store:
         return dict(self._namespace)
 
     @namespace.setter
-    def namespace(self, ns: Union[Namespace, Callable[[], Namespace]]) -> None:
+    def namespace(self, ns: Namespace | Callable[[], Namespace]) -> None:
         self._namespace = ns
 
     # ------------------------- Callback registration ------------------------------
@@ -246,8 +243,8 @@ class Store:
     def register(
         self,
         *,
-        providers: Optional[ProviderIterable] = None,
-        processors: Optional[ProcessorIterable] = None,
+        providers: ProviderIterable | None = None,
+        processors: ProcessorIterable | None = None,
     ) -> InjectionContext:
         """Register multiple providers and/or processors at once.
 
@@ -293,7 +290,7 @@ class Store:
     def register_provider(
         self,
         provider: Provider,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
     ) -> InjectionContext:
         """Register `provider` as a provider of `type_hint`.
@@ -319,7 +316,7 @@ class Store:
     def register_processor(
         self,
         processor: Processor,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
     ) -> InjectionContext:
         """Register `processor` as a processor of `type_hint`.
@@ -353,7 +350,7 @@ class Store:
         self,
         func: ProviderVar,
         *,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
     ) -> ProviderVar:
         ...
@@ -363,18 +360,18 @@ class Store:
         self,
         func: Literal[None] = ...,
         *,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
     ) -> Callable[[ProviderVar], ProviderVar]:
         ...
 
     def mark_provider(
         self,
-        func: Optional[ProviderVar] = None,
+        func: ProviderVar | None = None,
         *,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
-    ) -> Union[Callable[[ProviderVar], ProviderVar], ProviderVar]:
+    ) -> Callable[[ProviderVar], ProviderVar] | ProviderVar:
         """Decorate `func` as a provider of its first parameter type.
 
         Note, If func returns `Optional[Type]`, it will be registered as a provider
@@ -418,7 +415,7 @@ class Store:
         self,
         func: ProcessorVar,
         *,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
     ) -> ProcessorVar:
         ...
@@ -428,18 +425,18 @@ class Store:
         self,
         func: Literal[None] = ...,
         *,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
     ) -> Callable[[ProcessorVar], ProcessorVar]:
         ...
 
     def mark_processor(
         self,
-        func: Optional[ProcessorVar] = None,
+        func: ProcessorVar | None = None,
         *,
-        type_hint: Optional[object] = None,
+        type_hint: object | None = None,
         weight: float = 0,
-    ) -> Union[Callable[[ProcessorVar], ProcessorVar], ProcessorVar]:
+    ) -> Callable[[ProcessorVar], ProcessorVar] | ProcessorVar:
         """Decorate `func` as a processor of its first parameter type.
 
         Parameters
@@ -480,8 +477,8 @@ class Store:
     # ------------------------- Callback retrieval ------------------------------
 
     def iter_providers(
-        self, type_hint: Union[object, Type[T]]
-    ) -> Iterable[Callable[[], Optional[T]]]:
+        self, type_hint: object | type[T]
+    ) -> Iterable[Callable[[], T | None]]:
         """Iterate over all providers of `type_hint`.
 
         Parameters
@@ -497,7 +494,7 @@ class Store:
         return self._iter_type_map(type_hint, self._cached_provider_map)
 
     def iter_processors(
-        self, type_hint: Union[object, Type[T]]
+        self, type_hint: object | type[T]
     ) -> Iterable[Callable[[T], Any]]:
         """Iterate over all processors of `type_hint`.
 
@@ -515,7 +512,7 @@ class Store:
 
     # ------------------------- Instance retrieval ------------------------------
 
-    def provide(self, type_hint: Union[object, Type[T]]) -> Optional[T]:
+    def provide(self, type_hint: object | type[T]) -> T | None:
         """Provide an instance of `type_hint`.
 
         This will iterate over all providers of `type_hint` and return the first
@@ -542,7 +539,7 @@ class Store:
         self,
         result: Any,
         *,
-        type_hint: Union[object, Type[T], None] = None,
+        type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
     ) -> None:
@@ -589,10 +586,10 @@ class Store:
         *,
         providers: bool = True,
         processors: bool = False,
-        localns: Optional[dict] = None,
-        on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        guess_self: Optional[bool] = None,
+        localns: dict | None = None,
+        on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
+        on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
+        guess_self: bool | None = None,
     ) -> Callable[..., R]:
         ...
         # unfortunately, the best we can do is convert the signature to Callabe[..., R]
@@ -606,24 +603,24 @@ class Store:
         *,
         providers: bool = True,
         processors: bool = False,
-        localns: Optional[dict] = None,
-        on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        guess_self: Optional[bool] = None,
+        localns: dict | None = None,
+        on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
+        on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
+        guess_self: bool | None = None,
     ) -> Callable[[Callable[P, R]], Callable[..., R]]:
         ...
 
     def inject(
         self,
-        func: Optional[Callable[P, R]] = None,
+        func: Callable[P, R] | None = None,
         *,
         providers: bool = True,
         processors: bool = False,
-        localns: Optional[dict] = None,
-        on_unresolved_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        on_unannotated_required_args: Optional[RaiseWarnReturnIgnore] = None,
-        guess_self: Optional[bool] = None,
-    ) -> Union[Callable[..., R], Callable[[Callable[P, R]], Callable[..., R]]]:
+        localns: dict | None = None,
+        on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
+        on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
+        guess_self: bool | None = None,
+    ) -> Callable[..., R] | Callable[[Callable[P, R]], Callable[..., R]]:
         """Decorate `func` to inject dependencies at calltime.
 
         Assuming `providers` is True (the default), this will attempt retrieve
@@ -728,7 +725,7 @@ class Store:
                 return self.inject_processors(func) if processors else func
 
             # bail if there aren't any annotations at all
-            code: Optional[CodeType] = getattr(unwrap(func), "__code__", None)
+            code: CodeType | None = getattr(unwrap(func), "__code__", None)
             if (code and not code.co_argcount) and "return" not in getattr(
                 func, "__annotations__", {}
             ):
@@ -757,7 +754,7 @@ class Store:
                 _sig = cast("Signature", sig)  # mypy thinks sig is still optional
 
                 # first, get and call the provider functions for each parameter type:
-                _kwargs: Dict[str, Any] = {}
+                _kwargs: dict[str, Any] = {}
                 for param in _sig.parameters.values():
                     provided = self.provide(param.annotation)
                     if provided is not None:
@@ -817,7 +814,7 @@ class Store:
         self,
         func: Callable[P, R],
         *,
-        type_hint: Union[object, Type[T], None] = None,
+        type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
     ) -> Callable[P, R]:
@@ -828,7 +825,7 @@ class Store:
         self,
         func: Literal[None] = None,
         *,
-        type_hint: Union[object, Type[T], None] = None,
+        type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
     ) -> Callable[[Callable[P, R]], Callable[P, R]]:
@@ -836,12 +833,12 @@ class Store:
 
     def inject_processors(
         self,
-        func: Optional[Callable[P, R]] = None,
+        func: Callable[P, R] | None = None,
         *,
-        type_hint: Union[object, Type[T], None] = None,
+        type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
-    ) -> Union[Callable[[Callable[P, R]], Callable[P, R]], Callable[P, R]]:
+    ) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]:
         """Decorate a function to process its output.
 
         Variant of inject, but only injects processors (for the sake of more explicit
@@ -912,7 +909,7 @@ class Store:
     def _cached_processor_map(self) -> _CachedMap:
         return self._build_map(self._processors)
 
-    def _build_map(self, registry: List[_RegisteredCallback]) -> _CachedMap:
+    def _build_map(self, registry: list[_RegisteredCallback]) -> _CachedMap:
         """Build a map of type hints to callbacks.
 
         This is the sorted and cached version of the map that will be used to resolve
@@ -920,8 +917,8 @@ class Store:
         of *all* provider/processor type hints, regardless of whether they can be used
         with `is_subclass`.  The second is a map of only "issubclassable" type hints.
         """
-        all_: Dict[object, List[_RegisteredCallback]] = {}
-        subclassable: Dict[type, List[_RegisteredCallback]] = {}
+        all_: dict[object, list[_RegisteredCallback]] = {}
+        subclassable: dict[type, list[_RegisteredCallback]] = {}
         for p in registry:
             if p.origin not in all_:
                 all_[p.origin] = []
@@ -942,7 +939,7 @@ class Store:
         return _CachedMap(all_out, subclassable_out)
 
     def _iter_type_map(
-        self, hint: Union[object, Type[T]], callback_map: _CachedMap
+        self, hint: object | type[T], callback_map: _CachedMap
     ) -> Iterable[Callable]:
         _all_types = callback_map.all
         _subclassable_types = callback_map.subclassable
@@ -979,7 +976,7 @@ class Store:
                 "registration). Cannot be a provider."
             )
 
-            def _type_from_hints(hints: Dict[str, Any]) -> Any:
+            def _type_from_hints(hints: dict[str, Any]) -> Any:
                 return hints.get("return")
 
         else:
@@ -991,7 +988,7 @@ class Store:
                 "at registration). Cannot be a processor."
             )
 
-            def _type_from_hints(hints: Dict[str, Any]) -> Any:
+            def _type_from_hints(hints: dict[str, Any]) -> Any:
                 return next((v for k, v in hints.items() if k != "return"), None)
 
         _callbacks: Iterable[CallbackTuple]
@@ -1000,10 +997,10 @@ class Store:
         else:
             _callbacks = callbacks
 
-        to_register: List[_RegisteredCallback] = []
+        to_register: list[_RegisteredCallback] = []
         for tup in _callbacks:
             callback, *rest = tup
-            type_: Optional[HintArg] = None
+            type_: HintArg | None = None
             weight: float = 0
             if rest:
                 if len(rest) == 1:
@@ -1062,7 +1059,7 @@ class Store:
         return _dispose
 
     def _methodwrap(
-        self, callback: types.MethodType, reg: List[_RegisteredCallback], cache_map: str
+        self, callback: types.MethodType, reg: list[_RegisteredCallback], cache_map: str
     ) -> Callable:
         """Wrap a method in a weakref to prevent a strong reference to the owner."""
         ref = weakref.WeakMethod(callback)
@@ -1084,7 +1081,7 @@ class Store:
         return _callback
 
 
-def _validate_provider(obj: Union[T, Callable[[], T]]) -> Callable[[], T]:
+def _validate_provider(obj: T | Callable[[], T]) -> Callable[[], T]:
     """Check that an object is a valid provider.
 
     Can either be a function or an object. If a non-callable is passed, a function
@@ -1101,7 +1098,7 @@ def _validate_processor(obj: Callable[[T], Any]) -> Callable[[T], Any]:
     """
     if not callable(obj):
         raise ValueError(f"Processors must be callable. Got {obj!r}")
-    co: Optional[CodeType] = getattr(obj, "__code__", None)
+    co: CodeType | None = getattr(obj, "__code__", None)
     if not co:
         # if we don't have a code object, we can't check the number of arguments
         # TODO: see if we can do better in the future, but better to just return
