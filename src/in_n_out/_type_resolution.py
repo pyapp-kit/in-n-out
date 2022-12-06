@@ -6,12 +6,12 @@ import typing
 import warnings
 from functools import lru_cache, partial
 from inspect import Signature
-from typing import TYPE_CHECKING, Any, Callable, Dict, ForwardRef, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, ForwardRef
 
 try:
     from toolz import curry
 
-    PARTIAL_TYPES: Tuple[Type, ...] = (partial, curry)
+    PARTIAL_TYPES: tuple[type, ...] = (partial, curry)
 except ImportError:  # pragma: no cover
     PARTIAL_TYPES = (partial,)
 
@@ -24,8 +24,8 @@ PY39_OR_GREATER = sys.version_info >= (3, 9)
 
 
 @lru_cache(maxsize=1)
-def _typing_names() -> Dict[str, Any]:
-    return {**typing.__dict__, **types.__dict__}  # noqa: TYP006
+def _typing_names() -> dict[str, Any]:
+    return {**typing.__dict__, **types.__dict__}
 
 
 def _unwrap_partial(func: Any) -> Any:
@@ -36,10 +36,10 @@ def _unwrap_partial(func: Any) -> Any:
 
 def resolve_type_hints(
     obj: _get_type_hints_obj_allowed_types,
-    globalns: Optional[dict] = None,
-    localns: Optional[dict] = None,
+    globalns: dict | None = None,
+    localns: dict | None = None,
     include_extras: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Return type hints for an object.
 
     This is a small wrapper around `typing.get_type_hints()` that adds
@@ -67,7 +67,7 @@ def resolve_type_hints(
     _localns = dict(_typing_names())
     if localns:
         _localns.update(localns)  # explicitly provided locals take precedence
-    kwargs: Dict[str, Any] = dict(globalns=globalns, localns=_localns)
+    kwargs: dict[str, Any] = {"globalns": globalns, "localns": _localns}
     if PY39_OR_GREATER:
         kwargs["include_extras"] = include_extras
     return typing.get_type_hints(_unwrap_partial(obj), **kwargs)
@@ -75,9 +75,9 @@ def resolve_type_hints(
 
 def resolve_single_type_hints(
     *objs: Any,
-    localns: Optional[dict] = None,
+    localns: dict | None = None,
     include_extras: bool = False,
-) -> Tuple[Any, ...]:
+) -> tuple[Any, ...]:
     """Get type hints for one or more isolated type annotations.
 
     Wrapper around :func:`resolve_type_hints` (see docstring for that function for
@@ -106,7 +106,7 @@ def resolve_single_type_hints(
 def type_resolved_signature(
     func: Callable,
     *,
-    localns: Optional[dict] = None,
+    localns: dict | None = None,
     raise_unresolved_optional_args: bool = True,
     raise_unresolved_required_args: bool = True,
     guess_self: bool = True,
@@ -200,10 +200,10 @@ def type_resolved_signature(
 
 def _resolve_params_one_by_one(
     sig: Signature,
-    localns: Optional[dict] = None,
+    localns: dict | None = None,
     exclude_unresolved_optionals: bool = False,
     exclude_unresolved_mandatory: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Resolve all required param annotations in `sig`, but allow optional ones to fail.
 
     Helper function for :func:`type_resolved_signature`.  This fallback function is
@@ -267,11 +267,11 @@ def _resolve_params_one_by_one(
 
 def _resolve_sig_or_inform(
     func: Callable,
-    localns: Optional[dict],
+    localns: dict | None,
     on_unresolved_required_args: RaiseWarnReturnIgnore,
     on_unannotated_required_args: RaiseWarnReturnIgnore,
     guess_self: bool = True,
-) -> Optional[Signature]:
+) -> Signature | None:
     """Helper function for user warnings/errors during inject_dependencies.
 
     all parameters are described above in inject_dependencies
