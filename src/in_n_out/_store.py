@@ -966,7 +966,6 @@ class Store:
         callbacks: CallbackIterable,
         providers: bool = True,
     ) -> Disposer:
-
         if providers:
             reg = self._providers
             cache_map = "_cached_provider_map"

@@ -39,7 +39,6 @@ def test_create_get_destroy():
 
 
 def test_store_clear(test_store: Store):
-
     assert not test_store._providers
     assert not test_store._processors
 
