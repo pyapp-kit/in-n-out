@@ -111,7 +111,7 @@ def test_injection_without_args():
 modes = ["raise", "warn", "return", "ignore"]
 
 
-def unannotated(x) -> int:  # type: ignore  # noqa
+def unannotated(x) -> int:  # type: ignore
     ...
 
 
@@ -127,7 +127,6 @@ def unknown_and_unannotated(v: "Unknown", x) -> int:  # type: ignore  # noqa
 @pytest.mark.parametrize("on_unannotated", modes)
 @pytest.mark.parametrize("in_func", [unknown, unannotated, unknown_and_unannotated])
 def test_injection_errors(in_func, on_unresolved, on_unannotated):
-
     ctx: ContextManager = nullcontext()
     ctxb: ContextManager = nullcontext()
     expect_same_func_back = False

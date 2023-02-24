@@ -27,7 +27,7 @@ def _split_union(type_: Any) -> Tuple[List[Type], bool]:
     if _is_union(type_):
         types = []
         for arg in getattr(type_, "__args__", ()):
-            if arg is type(None):  # noqa: E721
+            if arg is type(None):
                 optional = True
             else:
                 types.append(arg)

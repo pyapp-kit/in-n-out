@@ -272,7 +272,9 @@ def _resolve_sig_or_inform(
     on_unannotated_required_args: RaiseWarnReturnIgnore,
     guess_self: bool = True,
 ) -> Signature | None:
-    """Helper function for user warnings/errors during inject_dependencies.
+    """Return a resolved signature, or None if the function should be returned as-is.
+
+    Helper function for user warnings/errors during inject_dependencies.
 
     all parameters are described above in inject_dependencies
     """
