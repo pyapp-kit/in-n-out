@@ -54,7 +54,7 @@ This also supports processing *return* values as well
 def func2(thing: Thing) -> str:
     return thing.name
 
-def greet_name(name: str) -> str:
+def greet_name(name: str):
     print(f"Hello, {name}!")
 
 ino.register_processor(greet_name)
