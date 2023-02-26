@@ -5,7 +5,7 @@ import types
 import warnings
 import weakref
 from functools import cached_property, wraps
-from inspect import CO_VARARGS, isgeneratorfunction, unwrap
+from inspect import CO_VARARGS, isgeneratorfunction, signature, unwrap
 from types import CodeType
 from typing import (
     TYPE_CHECKING,
@@ -1015,6 +1015,12 @@ class Store:
                 type_ = _type_from_hints(hints)
                 if type_ is None:
                     raise ValueError(err_msg.format(callback))
+            elif not providers:
+                for i, param in enumerate(signature(callback).parameters.values()):
+                    if param.annotation == type_:
+                        if i != 0:
+                            pass
+                        break
 
             callback = check_callback(callback)
 
@@ -1022,6 +1028,15 @@ class Store:
                 # if the callback is a method, we need to wrap it in a weakref
                 # to prevent a strong reference to the owner object.
                 callback = self._methodwrap(callback, reg, cache_map)
+
+            if param_name is not None:
+                _original = callback
+
+                @wraps(callback)
+                def _call_as_kwarg(arg: Any) -> Any:
+                    return _original(**{param_name: arg})  # type: ignore
+
+                callback = _call_as_kwarg
 
             origins, is_opt = _split_union(type_)
             for origin in origins:
