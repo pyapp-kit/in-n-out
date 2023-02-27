@@ -6,6 +6,7 @@ import warnings
 import weakref
 from functools import cached_property, wraps
 from inspect import CO_VARARGS, isgeneratorfunction, unwrap
+from logging import getLogger
 from types import CodeType
 from typing import (
     TYPE_CHECKING,
@@ -26,6 +27,9 @@ from typing import (
 
 from ._type_resolution import _resolve_sig_or_inform, resolve_type_hints
 from ._util import _split_union, issubclassable
+
+logger = getLogger("in_n_out")
+
 
 if TYPE_CHECKING:
     from inspect import Signature
@@ -542,6 +546,7 @@ class Store:
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
+        _funcname: str = "",
     ) -> None:
         """Provide an instance of `type_`.
 
@@ -562,11 +567,19 @@ class Store:
         raise_exception : bool, optional
             If `True`, and a processor raises an exception, it will be raised
             and the remaining processors will not be invoked.
+        _funcname: str, optional
+            The name of the function that called this method.  This is used internally
+            for debugging
         """
         if type_hint is None:
             type_hint = type(result)
-        for processor in self.iter_processors(type_hint):  # type: ignore
+        _processors: Iterable[Callable] = self.iter_processors(type_hint)
+        logger.debug(
+            "Invoking processors on result %r from function %r", result, _funcname
+        )
+        for processor in _processors:
             try:
+                logger.debug("  P: %s", processor)
                 processor(result)
             except Exception as e:  # pragma: no cover
                 if raise_exception:
@@ -746,11 +759,19 @@ class Store:
             if sig is None:  # something went wrong, and the user was notified.
                 return func
 
+            _fname = getattr(func, "__qualname__", func)
+
             # get provider functions for each required parameter
             @wraps(func)
             def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
                 # we're actually calling the "injected function" now
-
+                logger.debug(
+                    "Executing @injected %s%s with args: %r, kwargs: %r",
+                    _fname,
+                    sig,
+                    args,
+                    kwargs,
+                )
                 _sig = cast("Signature", sig)  # mypy thinks sig is still optional
 
                 # use bind_partial to allow the caller to still provide their own args
@@ -764,10 +785,22 @@ class Store:
                     if param.name not in bound.arguments:
                         provided = self.provide(param.annotation)
                         if provided is not None:
+                            logger.debug(
+                                "  injecting %s: %s = %r",
+                                param.name,
+                                param.annotation,
+                                provided,
+                            )
                             _injected_names.add(param.name)
                             bound.arguments[param.name] = provided
 
                 # call the function with injected values
+                logger.debug(
+                    "  Calling %s with %r (injected %r)",
+                    _fname,
+                    bound.arguments,
+                    _injected_names,
+                )
                 try:
                     result = func(**bound.arguments)
                 except TypeError as e:
@@ -780,6 +813,7 @@ class Store:
                         if _injected_names
                         else "NO arguments"
                     )
+                    logger.exception(e)
                     raise TypeError(
                         f"After injecting dependencies for {_argnames}, {e}"
                     ) from e
@@ -896,6 +930,7 @@ class Store:
                         type_hint=type_hint,
                         first_processor_only=first_processor_only,
                         raise_exception=raise_exception,
+                        _funcname=getattr(func, "__qualname__", str(func)),
                     )
                 return result
 
@@ -907,10 +942,12 @@ class Store:
 
     @cached_property
     def _cached_provider_map(self) -> _CachedMap:
+        logger.debug("Rebuilding provider map cache")
         return self._build_map(self._providers)
 
     @cached_property
     def _cached_processor_map(self) -> _CachedMap:
+        logger.debug("Rebuilding processor map cache")
         return self._build_map(self._processors)
 
     def _build_map(self, registry: list[_RegisteredCallback]) -> _CachedMap:
@@ -968,9 +1005,9 @@ class Store:
     def _register_callbacks(
         self,
         callbacks: CallbackIterable,
-        providers: bool = True,
+        is_provider: bool = True,
     ) -> Disposer:
-        if providers:
+        if is_provider:
             reg = self._providers
             cache_map = "_cached_provider_map"
             check_callback: Callable[[Any], Callable] = _validate_provider
@@ -1000,6 +1037,7 @@ class Store:
         else:
             _callbacks = callbacks
 
+        regname = "provider" if is_provider else "processor"
         to_register: list[_RegisteredCallback] = []
         for tup in _callbacks:
             callback, *rest = tup
@@ -1035,7 +1073,6 @@ class Store:
                     try:
                         hash(origin)
                     except TypeError:
-                        regname = "provider" if providers else "processor"
                         raise TypeError(
                             f"{origin!r} cannot be used as a {regname} hint, since it "
                             "is not hashable and cannot be passed as the second "
@@ -1043,12 +1080,23 @@ class Store:
                         ) from None
 
                 cb = _RegisteredCallback(origin, callback, is_opt, weight, subclassable)
+                logger.debug(
+                    "Registering %s of %s: %s (weight: %s, subclassable: %s)",
+                    regname,
+                    origin,
+                    callback,
+                    weight,
+                    subclassable,
+                )
                 to_register.append(cb)
 
         def _dispose() -> None:
             for p in to_register:
                 with contextlib.suppress(ValueError):
                     reg.remove(p)
+                    logger.debug(
+                        "Unregistering %s of %s: %s", regname, p.origin, p.callback
+                    )
             # attribute error in case the cache was never built
             with contextlib.suppress(AttributeError):
                 delattr(self, cache_map)
