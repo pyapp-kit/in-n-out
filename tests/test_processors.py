@@ -134,3 +134,30 @@ def test_global_register():
     ino.register_processor(f)
     ino.process(1)
     mock.assert_called_once_with(1)
+
+
+def test_processor_provider_recursion() -> None:
+    """Make sure to avoid infinte recursion when a provider uses processors."""
+
+    class Thing:
+        count = 0
+
+    # this is both a processor and a provider
+    @ino.register_provider
+    @ino.inject_processors
+    def thing_provider() -> Thing:
+        return Thing()
+
+    @ino.inject
+    def add_item(thing: Thing) -> None:
+        thing.count += 1
+
+    N = 3
+    for _ in range(N):
+        ino.register_processor(add_item)
+
+    @ino.inject
+    def func(thing: Thing) -> int:
+        return thing.count
+
+    assert func() == N
