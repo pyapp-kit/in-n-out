@@ -4,7 +4,7 @@ import contextlib
 import types
 import warnings
 import weakref
-from functools import cached_property, wraps
+from functools import cached_property, partial, wraps
 from inspect import CO_VARARGS, isgeneratorfunction, signature, unwrap
 from types import CodeType
 from typing import (
@@ -756,9 +756,10 @@ class Store:
                 # first, get and call the provider functions for each parameter type:
                 _kwargs: dict[str, Any] = {}
                 for param in _sig.parameters.values():
-                    provided = self.provide(param.annotation)
-                    if provided is not None:
-                        _kwargs[param.name] = provided
+                    if param.name not in kwargs:
+                        provided = self.provide(param.annotation)
+                        if provided is not None:
+                            _kwargs[param.name] = provided
 
                 # use bind_partial to allow the caller to still provide their own args
                 # if desired. (i.e. the injected deps are only used if not provided)
@@ -1010,17 +1011,27 @@ class Store:
                 else:  # pragma: no cover
                     raise ValueError(f"Invalid callback tuple: {tup!r}")
 
+            # name of the parameter we are processing, only if it's not the first arg
+            # and only if a type_hint was explicitly provided
+            param_to_process: str | None = None
             if type_ is None:
                 hints = resolve_type_hints(callback, localns=self.namespace)
                 type_ = _type_from_hints(hints)
                 if type_ is None:
                     raise ValueError(err_msg.format(callback))
             elif not providers:
-                for i, param in enumerate(signature(callback).parameters.values()):
-                    if param.annotation == type_:
-                        if i != 0:
-                            pass
-                        break
+                annotations = getattr(callback, "__annotations__", {})
+                if annotations:
+                    for i, (name, hint) in enumerate(annotations.items()):
+                        if hint == type_:
+                            if i != 0:
+                                param_to_process = name
+                            break
+                    else:
+                        warnings.warn(
+                            f"Processor has no parameter annotated as: {type_!r}",
+                            stacklevel=2,
+                        )
 
             callback = check_callback(callback)
 
@@ -1029,12 +1040,16 @@ class Store:
                 # to prevent a strong reference to the owner object.
                 callback = self._methodwrap(callback, reg, cache_map)
 
-            if param_name is not None:
-                _original = callback
+            if param_to_process is not None:
+                callback= partial(callback, **{param_to_process: None})
 
                 @wraps(callback)
-                def _call_as_kwarg(arg: Any) -> Any:
-                    return _original(**{param_name: arg})  # type: ignore
+                def _call_as_kwarg(
+                    arg: Any,
+                    _pname: str = param_to_process,  # type: ignore  [assignment]
+                    _original: Callable = callback,
+                ) -> Any:
+                    return _original(**{_pname: arg})
 
                 callback = _call_as_kwarg
 
