@@ -4,7 +4,7 @@ import contextlib
 import types
 import warnings
 import weakref
-from functools import cached_property, partial, wraps
+from functools import cached_property, wraps
 from inspect import CO_VARARGS, isgeneratorfunction, unwrap
 from types import CodeType
 from typing import (
@@ -1044,7 +1044,6 @@ class Store:
                 callback = self._methodwrap(callback, reg, cache_map)
 
             if param_to_process is not None:
-                callback = partial(callback, **{param_to_process: None})
 
                 @wraps(callback)
                 def _call_as_kwarg(

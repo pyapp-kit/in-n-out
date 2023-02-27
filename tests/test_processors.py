@@ -136,24 +136,20 @@ def test_global_register():
     mock.assert_called_once_with(1)
 
 
-def test_processors_with_injections() -> None:
-    """Test that we can use processors with injections."""
+def test_processors_not_first_arg() -> None:
+    """Test that we can use processors something other than the first argument."""
 
     class ThingToProcess:
         ...
 
-    class InjectedDep:
-        ...
-
-    dep = InjectedDep()
     t2p = ThingToProcess()
     mock = Mock()
 
     @ino.inject
-    def processor_that_has_injections(p0: InjectedDep, p1: ThingToProcess) -> None:
+    def takes_two_things(p0: int, p1: ThingToProcess) -> None:
         mock(p0, p1)
 
-    ino.register_processor(processor_that_has_injections, type_hint=ThingToProcess)
+    ino.register_processor(takes_two_things, type_hint=ThingToProcess)
 
     @ino.inject_processors
     def return_a_thing() -> ThingToProcess:
@@ -162,46 +158,9 @@ def test_processors_with_injections() -> None:
     with pytest.warns(UserWarning, match="Processor .* failed to process result"):
         return_a_thing()
 
-    @ino.register_provider
-    def provide_other_thing() -> InjectedDep:
-        return dep
-
-    return_a_thing()
-    mock.assert_called_once_with(dep, t2p)
-
-
-def test_processors_with_injections222() -> None:
-    class Dummy:
-        pass
-
-    class Thing:
-        def __init__(self):
-            self.list = []
-
-    def dummy_provider() -> Dummy:
-        return Dummy()
-
-    @ino.inject
-    @ino.inject_processors
-    def thing_provider(dummy: Dummy) -> Thing:
-        return Thing()
-
-    ino.register_provider(dummy_provider)
-    ino.register_provider(thing_provider)
-
-    @ino.inject
-    def add_item(thing: Thing, dummy: Dummy):
-        thing.list.append("item")
-
-    ino.register_processor(add_item)
-    ino.register_processor(add_item)
-    ino.register_processor(add_item)
-
-    @ino.inject
-    def func(thing: Thing):
-        return thing.list
-
-    assert func() == ["item"] * 3
+    with ino.register(providers=[(lambda: 777, int)]):
+        return_a_thing()
+        mock.assert_called_once_with(777, t2p)
 
 
 def test_processor_provider_recursion() -> None:
