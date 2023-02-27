@@ -1,5 +1,6 @@
 from collections import ChainMap
 from typing import (
+    TYPE_CHECKING,
     Callable,
     Generic,
     Iterable,
@@ -15,7 +16,8 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store
+if TYPE_CHECKING:
+    from in_n_out import Store
 
 T = TypeVar("T")
 
@@ -38,7 +40,7 @@ SUBCLASS_PAIRS = [
 
 @pytest.mark.parametrize("type_", NON_SUBCLASSABLE_TYPES)
 @pytest.mark.parametrize("mode", ["provider", "processor"])
-def test_non_standard_types(test_store: Store, type_, mode) -> None:
+def test_non_standard_types(test_store: "Store", type_, mode) -> None:
     mock = Mock(return_value=1)
     if mode == "provider":
         test_store.register_provider(mock, type_)
@@ -50,7 +52,7 @@ def test_non_standard_types(test_store: Store, type_, mode) -> None:
         mock.assert_called_once_with(2)
 
 
-def test_provider_type_error(test_store: Store) -> None:
+def test_provider_type_error(test_store: "Store") -> None:
     with pytest.raises(TypeError, match="cannot be used as a provider hint"):
         test_store.register_provider(lambda: 1, set())
     with pytest.raises(TypeError, match="cannot be used as a processor hint"):
@@ -59,7 +61,7 @@ def test_provider_type_error(test_store: Store) -> None:
 
 @pytest.mark.parametrize("sub, sup", SUBCLASS_PAIRS)
 @pytest.mark.parametrize("mode", ["provider", "processor"])
-def test_subclass_pairs(test_store: Store, sub, sup, mode) -> None:
+def test_subclass_pairs(test_store: "Store", sub, sup, mode) -> None:
     mock = Mock(return_value=1)
     if mode == "provider":
         test_store.register_provider(mock, sup)
