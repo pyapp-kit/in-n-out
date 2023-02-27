@@ -1,4 +1,4 @@
-from typing import List, Optional, Sequence, Union
+from typing import Optional, Sequence, Union
 from unittest.mock import Mock
 
 import pytest
@@ -170,9 +170,7 @@ def test_processors_with_injections() -> None:
     mock.assert_called_once_with(dep, t2p)
 
 
-
 def test_processors_with_injections222() -> None:
-
     class Dummy:
         pass
 
@@ -191,18 +189,9 @@ def test_processors_with_injections222() -> None:
     ino.register_provider(dummy_provider)
     ino.register_provider(thing_provider)
 
-    # def add_item(thing: Thing):
-    #     thing.list.append("item")
-
     @ino.inject
     def add_item(thing: Thing, dummy: Dummy):
         thing.list.append("item")
-
-    # def add_item(thing: Thing):
-    #     @ino.inject
-    #     def inner(dummy: Dummy):
-    #         thing.list.append("item")
-    #     inner()
 
     ino.register_processor(add_item)
     ino.register_processor(add_item)
@@ -213,3 +202,30 @@ def test_processors_with_injections222() -> None:
         return thing.list
 
     assert func() == ["item"] * 3
+
+
+def test_processor_provider_recursion() -> None:
+    """Make sure to avoid infinte recursion when a provider uses processors."""
+
+    class Thing:
+        count = 0
+
+    # this is both a processor and a provider
+    @ino.register_provider
+    @ino.inject_processors
+    def thing_provider() -> Thing:
+        return Thing()
+
+    @ino.inject
+    def add_item(thing: Thing) -> None:
+        thing.count += 1
+
+    N = 3
+    for _ in range(N):
+        ino.register_processor(add_item)
+
+    @ino.inject
+    def func(thing: Thing) -> int:
+        return thing.count
+
+    assert func() == N

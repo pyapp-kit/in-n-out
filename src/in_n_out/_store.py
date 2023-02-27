@@ -5,7 +5,7 @@ import types
 import warnings
 import weakref
 from functools import cached_property, partial, wraps
-from inspect import CO_VARARGS, isgeneratorfunction, signature, unwrap
+from inspect import CO_VARARGS, isgeneratorfunction, unwrap
 from types import CodeType
 from typing import (
     TYPE_CHECKING,
@@ -753,29 +753,32 @@ class Store:
 
                 _sig = cast("Signature", sig)  # mypy thinks sig is still optional
 
-                # first, get and call the provider functions for each parameter type:
-                _kwargs: dict[str, Any] = {}
-                for param in _sig.parameters.values():
-                    if param.name not in kwargs:
-                        provided = self.provide(param.annotation)
-                        if provided is not None:
-                            _kwargs[param.name] = provided
-
                 # use bind_partial to allow the caller to still provide their own args
                 # if desired. (i.e. the injected deps are only used if not provided)
                 bound = _sig.bind_partial(*args, **kwargs)
                 bound.apply_defaults()
 
+                # first, get and call the provider functions for each parameter type:
+                _injected_names: set[str] = set()
+                for param in _sig.parameters.values():
+                    if param.name not in bound.arguments:
+                        provided = self.provide(param.annotation)
+                        if provided is not None:
+                            _injected_names.add(param.name)
+                            bound.arguments[param.name] = provided
+
                 # call the function with injected values
                 try:
-                    result = func(**{**_kwargs, **bound.arguments})
+                    result = func(**bound.arguments)
                 except TypeError as e:
                     if "missing" not in e.args[0]:
                         raise  # pragma: no cover
                     # likely a required argument is still missing.
                     # show what was injected and raise
                     _argnames = (
-                        f"arguments: {set(_kwargs)!r}" if _kwargs else "NO arguments"
+                        f"arguments: {_injected_names!r}"
+                        if _injected_names
+                        else "NO arguments"
                     )
                     raise TypeError(
                         f"After injecting dependencies for {_argnames}, {e}"
@@ -1041,7 +1044,7 @@ class Store:
                 callback = self._methodwrap(callback, reg, cache_map)
 
             if param_to_process is not None:
-                callback= partial(callback, **{param_to_process: None})
+                callback = partial(callback, **{param_to_process: None})
 
                 @wraps(callback)
                 def _call_as_kwarg(
