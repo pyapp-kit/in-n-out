@@ -5,6 +5,7 @@
 [![Python Version](https://img.shields.io/pypi/pyversions/in-n-out.svg?color=green)](https://python.org)
 [![CI](https://github.com/pyapp-kit/in-n-out/actions/workflows/ci.yml/badge.svg)](https://github.com/pyapp-kit/in-n-out/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/pyapp-kit/in-n-out/branch/main/graph/badge.svg)](https://app.codecov.io/gh/pyapp-kit/in-n-out)
+[![Benchmarks](https://img.shields.io/badge/⏱-codspeed-%23FF7B53)](https://codspeed.io/pyapp-kit/in-n-out)
 
 Python dependency injection you can taste.
 
