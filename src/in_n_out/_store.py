@@ -572,7 +572,8 @@ class Store:
                 if raise_exception:
                     raise e
                 warnings.warn(
-                    f"Processor {processor!r} failed to process result {result!r}: {e}"
+                    f"Processor {processor!r} failed to process result {result!r}: {e}",
+                    stacklevel=2,
                 )
             if first_processor_only:
                 break
@@ -1030,7 +1031,7 @@ class Store:
                             if i != 0:
                                 param_to_process = name
                             break
-                    else:
+                    else:  # pragma: no cover
                         warnings.warn(
                             f"Processor has no parameter annotated as: {type_!r}",
                             stacklevel=2,
