@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.1.7](https://github.com/pyapp-kit/in-n-out/tree/0.1.7) (2023-02-27)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.6...0.1.7)
+
+**Implemented enhancements:**
+
+- feat: add logging [\#53](https://github.com/pyapp-kit/in-n-out/pull/53) ([tlambert03](https://github.com/tlambert03))
+
+**Fixed bugs:**
+
+- fix: avoid recursion when a provider also uses processors [\#51](https://github.com/pyapp-kit/in-n-out/pull/51) ([tlambert03](https://github.com/tlambert03))
+- fix: Fix README example [\#48](https://github.com/pyapp-kit/in-n-out/pull/48) ([davidbrochart](https://github.com/davidbrochart))
+
+**Tests & CI:**
+
+- test: add benchmarks [\#55](https://github.com/pyapp-kit/in-n-out/pull/55) ([tlambert03](https://github.com/tlambert03))
+- chore: minor ruff updates [\#54](https://github.com/pyapp-kit/in-n-out/pull/54) ([tlambert03](https://github.com/tlambert03))
+- ci: fix ci [\#49](https://github.com/pyapp-kit/in-n-out/pull/49) ([tlambert03](https://github.com/tlambert03))
+- build: use ruff for linting, update pre-commit [\#45](https://github.com/pyapp-kit/in-n-out/pull/45) ([tlambert03](https://github.com/tlambert03))
+
+**Merged pull requests:**
+
+- ci\(dependabot\): bump actions/setup-python from 3 to 4 [\#56](https://github.com/pyapp-kit/in-n-out/pull/56) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore: rename napari org to pyapp-kit [\#43](https://github.com/pyapp-kit/in-n-out/pull/43) ([tlambert03](https://github.com/tlambert03))
+
 ## [v0.1.6](https://github.com/pyapp-kit/in-n-out/tree/v0.1.6) (2022-11-09)
 
 [Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.5...v0.1.6)
