@@ -1061,7 +1061,7 @@ class Store:
                 type_ = _type_from_hints(hints)
                 if type_ is None:
                     raise ValueError(err_msg.format(callback))
-            elif not providers:
+            elif not is_provider:
                 annotations = getattr(callback, "__annotations__", {})
                 if annotations:
                     for i, (name, hint) in enumerate(annotations.items()):
