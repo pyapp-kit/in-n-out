@@ -1,12 +1,7 @@
 # https://peps.python.org/pep-0517/
 [build-system]
-requires = [
-    "setuptools>=45",
-    "wheel",
-    "setuptools-scm>=6.2",
-    "Cython==3.0.0a11",
-]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.8.0", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 # https://peps.python.org/pep-0621/
 [project]
@@ -57,26 +52,31 @@ build = ["Cython==3.0.0a11;sys_platform != 'win32'"]
 homepage = "https://github.com/pyapp-kit/in-n-out"
 repository = "https://github.com/pyapp-kit/in-n-out"
 
-# same as console_scripts entry point
-# [project.scripts]
-# spam-cli = "spam:main_cli"
+[tool.hatch.version]
+source = "vcs"
 
-# Entry points
-# https://peps.python.org/pep-0621/#entry-points
-# [project.entry-points."spam.magical"]
-# tomatoes = "spam:main_tomatoes"
+[tool.hatch.build.targets.sdist]
+include = ["src", "tests", "CHANGELOG.md"]
 
-# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
-[tool.setuptools]
-zip-safe = false
-include-package-data = true
-packages = { find = { where = ["src"], exclude = [] } }
+[tool.hatch.build.targets.wheel]
+only-include = ["src"]
+sources = ["src"]
 
-[tool.setuptools.package-data]
-"*" = ["py.typed"]
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+mypy-args = ["--ignore-missing-imports"]
+enable-by-default = false
+require-runtime-dependencies = true
+dependencies = [
+    "hatch-mypyc>=0.13.0",
+    "mypy>=0.991",
+]
+include = [
+    'src/in_n_out/_store.py',
+    'src/in_n_out/_global.py',
+    'src/in_n_out/_type_resolution.py',
+    'src/in_n_out/_util.py'
+]
 
-# https://github.com/pypa/setuptools_scm/#pyprojecttoml-usage
-[tool.setuptools_scm]
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
@@ -143,7 +143,7 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["cython"]
+module = ["cython", "toolz"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

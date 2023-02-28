@@ -1,13 +1,13 @@
 from __future__ import annotations
 
+import contextlib
 from textwrap import indent
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, overload
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, TypeVar, overload
 
 from ._store import InjectionContext, Store
 
 if TYPE_CHECKING:
     from ._store import (
-        P,
         Processor,
         ProcessorIterable,
         ProcessorVar,
@@ -25,12 +25,14 @@ store : Union[Store, str None]
     global store is used.
 """
 _STORE_PARAM = indent(_STORE_PARAM.strip(), "        ")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
-def _add_store_to_doc(func: T) -> T:
+def _add_store_to_doc(func: F) -> F:
     new_doc: list[str] = []
 
-    store_doc: str = getattr(Store, func.__name__).__doc__  # type: ignore
+    name: str = func.__name__
+    store_doc: str = getattr(Store, name).__doc__ or ""
     for n, line in enumerate(store_doc.splitlines()):
         if line.lstrip().startswith("Returns"):
             new_doc.insert(n - 1, _STORE_PARAM)
@@ -38,7 +40,8 @@ def _add_store_to_doc(func: T) -> T:
         # TODO: use re.sub instead
         new_doc.append(line.replace(" store.", " ").replace("@store.", "@"))
 
-    func.__doc__ = "\n".join(new_doc)
+    with contextlib.suppress(AttributeError):  # when compiled
+        func.__doc__ = "\n".join(new_doc)
     return func
 
 
@@ -191,7 +194,7 @@ def process(
 
 @overload
 def inject(
-    func: Callable[P, R],
+    func: Callable[..., R],
     *,
     providers: bool = True,
     processors: bool = False,
@@ -218,13 +221,13 @@ def inject(
     on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
     guess_self: bool | None = None,
     store: str | Store | None = None,
-) -> Callable[[Callable[P, R]], Callable[..., R]]:
+) -> Callable[[Callable[..., R]], Callable[..., R]]:
     ...
 
 
 @_add_store_to_doc
 def inject(
-    func: Callable[P, R] | None = None,
+    func: Callable[..., R] | None = None,
     *,
     providers: bool = True,
     processors: bool = False,
@@ -233,7 +236,7 @@ def inject(
     on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
     guess_self: bool | None = None,
     store: str | Store | None = None,
-) -> Callable[..., R] | Callable[[Callable[P, R]], Callable[..., R]]:
+) -> Callable[..., R] | Callable[[Callable[..., R]], Callable[..., R]]:
     return _store_or_global(store).inject(
         func=func,
         providers=providers,
@@ -247,13 +250,13 @@ def inject(
 
 @overload
 def inject_processors(
-    func: Callable[P, R],
+    func: Callable[..., R],
     *,
     hint: object | type[T] | None = None,
     first_processor_only: bool = False,
     raise_exception: bool = False,
     store: str | Store | None = None,
-) -> Callable[P, R]:
+) -> Callable[..., R]:
     ...
 
 
@@ -265,19 +268,19 @@ def inject_processors(
     first_processor_only: bool = False,
     raise_exception: bool = False,
     store: str | Store | None = None,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
+) -> Callable[[Callable[..., R]], Callable[..., R]]:
     ...
 
 
 @_add_store_to_doc
 def inject_processors(
-    func: Callable[P, R] | None = None,
+    func: Callable[..., R] | None = None,
     *,
     hint: object | type[T] | None = None,
     first_processor_only: bool = False,
     raise_exception: bool = False,
     store: str | Store | None = None,
-) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]:
+) -> Callable[[Callable[..., R]], Callable[..., R]] | Callable[..., R]:
     return _store_or_global(store).inject_processors(
         func=func,
         type_hint=hint,

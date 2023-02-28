@@ -162,6 +162,8 @@ jobs:
 
       - name: install
         run: python -m pip install -e .[test]
+        env:
+          HATCH_BUILD_HOOKS_ENABLE: "1"
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v1

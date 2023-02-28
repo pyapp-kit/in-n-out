@@ -1,34 +1,24 @@
-import contextlib
-import os
 import sys
 
-import setuptools
+sys.stderr.write(
+    """
+===============================
+Unsupported installation method
+===============================
+in-n-out does not support installation with `python setup.py install`.
+Please use `python -m pip install .` instead.
+"""
+)
+sys.exit(1)
 
-ext_modules = None
-if (
-    all(arg not in sys.argv for arg in ["clean", "check"])
-    and "SKIP_CYTHON" not in os.environ
-):
-    with contextlib.suppress(ImportError):
-        from Cython.Build import cythonize
 
-        # For cython test coverage install with `make build-trace`
-        compiler_directives = {"linetrace": os.getenv("CYTHON_TRACE", False)}
+# The below code will never execute, however GitHub is particularly
+# picky about where it finds Python packaging metadata.
+# See: https://github.com/github/feedback/discussions/6456
+#
+# To be removed once GitHub catches up.
 
-        # Set CFLAG to all optimizations (-O3)
-        # Any additional CFLAGS will be appended.
-        # Only the last optimization flag will have effect
-        os.environ["CFLAGS"] = "-O3 " + os.environ.get("CFLAGS", "")
-
-        ext_modules = cythonize(
-            "src/in_n_out/*.py",
-            exclude=["**/__init__.py"],
-            nthreads=int(os.getenv("CYTHON_NTHREADS", 0)),
-            language_level=3,
-            compiler_directives=compiler_directives,
-        )
-
-setuptools.setup(
-    ext_modules=ext_modules,
-    package_dir={"": "src"},
+setup(  # type: ignore  # noqa
+    name="in-n-out",
+    install_requires=[],
 )
