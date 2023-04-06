@@ -409,7 +409,7 @@ class Store:
             try:
                 self.register_provider(func, type_hint=type_hint, weight=weight)
             except ValueError as e:
-                warnings.warn(str(e))
+                warnings.warn(str(e), stacklevel=2)
             return func
 
         return _deco(func) if func is not None else _deco
@@ -473,7 +473,7 @@ class Store:
             try:
                 self.register_processor(func, type_hint=type_hint, weight=weight)
             except ValueError as e:
-                warnings.warn(str(e))
+                warnings.warn(str(e), stacklevel=2)
             return func
 
         return _deco(func) if func is not None else _deco
@@ -585,7 +585,8 @@ class Store:
                 if raise_exception:
                     raise e
                 warnings.warn(
-                    f"Processor {processor!r} failed to process result {result!r}: {e}"
+                    f"Processor {processor!r} failed to process result {result!r}: {e}",
+                    stacklevel=2,
                 )
             if first_processor_only:
                 break
