@@ -797,7 +797,8 @@ class Store:
                         elif param.default is param.empty:
                             raise RuntimeError(
                                 f"Could not provide {param.name} for {func} "
-                                f"when using {list(self.iter_providers(param.annotation))}"
+                                f"when using "
+                                f"{list(self.iter_providers(param.annotation))}"
                             )
 
                 # call the function with injected values
