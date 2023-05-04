@@ -785,11 +785,6 @@ class Store:
                 for param in sig_.parameters.values():
                     if param.name not in bound.arguments:
                         provided = self.provide(param.annotation)
-                        if provided is None and param.default is param.empty:
-                            raise RuntimeError(
-                                f"Could not provide {param.name} for {func} "
-                                f"when using {list(self.iter_providers(param.annotation))}"
-                            )
                         if provided is not None:
                             logger.debug(
                                 "  injecting %s: %s = %r",
@@ -799,6 +794,11 @@ class Store:
                             )
                             _injected_names.add(param.name)
                             bound.arguments[param.name] = provided
+                        elif param.default is param.empty:
+                            raise RuntimeError(
+                                f"Could not provide {param.name} for {func} "
+                                f"when using {list(self.iter_providers(param.annotation))}"
+                            )
 
                 # call the function with injected values
                 logger.debug(

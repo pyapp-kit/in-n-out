@@ -63,9 +63,8 @@ def test_injection_missing():
     def f(x: int):
         return x
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(RuntimeError, match="Could not provide x for <function"):
         f()
-    assert "missing 1 required positional argument" in str(e.value)
     assert f(4) == 4
     with register(providers={int: lambda: 1}):
         assert f() == 1
@@ -194,7 +193,7 @@ def test_optional_provider_with_required_arg(test_store: Store):
         mock(x)
 
     with test_store.register(providers={Optional[int]: lambda: None}):
-        with pytest.raises(TypeError, match="missing 1 required positional argument"):
+        with pytest.raises(RuntimeError, match="Could not provide x for <function"):
             f()
         mock.assert_not_called()
 
