@@ -63,7 +63,7 @@ def test_injection_missing():
     def f(x: int):
         return x
 
-    with pytest.raises(RuntimeError, match="Could not provide x for <function"):
+    with pytest.raises(TypeError, match="After injecting dependencies"):
         f()
     assert f(4) == 4
     with register(providers={int: lambda: 1}):

@@ -821,7 +821,8 @@ class Store:
                             and param.default is param.empty
                         ):
                             logger.error(
-                                f"Do not have argument for {param.name}: using providers "
+                                f"Do not have argument for {param.name}: using "
+                                "providers "
                                 f"{list(self.iter_providers(param.annotation))}"
                             )
 
