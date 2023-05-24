@@ -193,7 +193,7 @@ def test_optional_provider_with_required_arg(test_store: Store):
         mock(x)
 
     with test_store.register(providers={Optional[int]: lambda: None}):
-        with pytest.raises(RuntimeError, match="Could not provide x for <function"):
+        with pytest.raises(TypeError, match="missing 1 required positional argument"):
             f()
         mock.assert_not_called()
 
