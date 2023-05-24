@@ -794,12 +794,6 @@ class Store:
                             )
                             _injected_names.add(param.name)
                             bound.arguments[param.name] = provided
-                        elif param.default is param.empty:
-                            raise RuntimeError(
-                                f"Could not provide {param.name} for {func} "
-                                f"when using "
-                                f"{list(self.iter_providers(param.annotation))}"
-                            )
 
                 # call the function with injected values
                 logger.debug(
@@ -821,6 +815,13 @@ class Store:
                         else "NO arguments"
                     )
                     logger.exception(e)
+                    for param in sig_.parameters.values():
+                        if param.name not in bound.arguments and param.default is param.empty:
+                            logger.error(
+                                f"Do not have argument for {param.name}: using providers "
+                                f"{list(self.iter_providers(param.annotation))}"
+                            )
+
                     raise TypeError(
                         f"After injecting dependencies for {_argnames}, {e}"
                     ) from e
