@@ -63,9 +63,8 @@ def test_injection_missing():
     def f(x: int):
         return x
 
-    with pytest.raises(TypeError) as e:
+    with pytest.raises(TypeError, match="After injecting dependencies"):
         f()
-    assert "missing 1 required positional argument" in str(e.value)
     assert f(4) == 4
     with register(providers={int: lambda: 1}):
         assert f() == 1

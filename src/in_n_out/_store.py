@@ -773,16 +773,16 @@ class Store:
                     args,
                     kwargs,
                 )
-                _sig = cast("Signature", sig)  # mypy thinks sig is still optional
+                sig_ = cast("Signature", sig)  # mypy thinks sig is still optional
 
                 # use bind_partial to allow the caller to still provide their own args
                 # if desired. (i.e. the injected deps are only used if not provided)
-                bound = _sig.bind_partial(*args, **kwargs)
+                bound = sig_.bind_partial(*args, **kwargs)
                 bound.apply_defaults()
 
                 # first, get and call the provider functions for each parameter type:
                 _injected_names: set[str] = set()
-                for param in _sig.parameters.values():
+                for param in sig_.parameters.values():
                     if param.name not in bound.arguments:
                         provided = self.provide(param.annotation)
                         if provided is not None:
@@ -815,6 +815,17 @@ class Store:
                         else "NO arguments"
                     )
                     logger.exception(e)
+                    for param in sig_.parameters.values():
+                        if (
+                            param.name not in bound.arguments
+                            and param.default is param.empty
+                        ):
+                            logger.error(
+                                f"Do not have argument for {param.name}: using "
+                                "providers "
+                                f"{list(self.iter_providers(param.annotation))}"
+                            )
+
                     raise TypeError(
                         f"After injecting dependencies for {_argnames}, {e}"
                     ) from e
