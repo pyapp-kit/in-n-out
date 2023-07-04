@@ -613,7 +613,7 @@ class Store:
     @overload
     def inject(
         self,
-        func: Literal[None] = None,
+        func: Literal[None] | None = None,
         *,
         providers: bool = True,
         processors: bool = False,
@@ -873,7 +873,7 @@ class Store:
     @overload
     def inject_processors(
         self,
-        func: Literal[None] = None,
+        func: Literal[None] | None = None,
         *,
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
