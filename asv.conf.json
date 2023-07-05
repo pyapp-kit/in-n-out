@@ -9,9 +9,6 @@
     "install_timeout": 600,
     "show_commit_url": "https://github.com/pyapp-kit/in-n-out/commit/",
     "pythons": ["3.10"],
-    "matrix": {
-      "pip+cython": ["3.0.0a11", null]
-    },
     "env_dir": "/tmp/.asv/env",
     "results_dir": ".asv/results",
     "html_dir": ".asv/html"
