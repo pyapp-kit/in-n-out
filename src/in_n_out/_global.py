@@ -209,7 +209,7 @@ def inject(
 
 @overload
 def inject(
-    func: Literal[None] = None,
+    func: Literal[None] | None = None,
     *,
     providers: bool = True,
     processors: bool = False,
@@ -259,7 +259,7 @@ def inject_processors(
 
 @overload
 def inject_processors(
-    func: Literal[None] = None,
+    func: Literal[None] | None = None,
     *,
     hint: object | type[T] | None = None,
     first_processor_only: bool = False,
