@@ -1,15 +1,7 @@
 import types
 from typing import Any, List, Set, Tuple, Type, Union, cast, get_origin
 
-try:
-    import cython
-except ImportError:  # pragma: no cover
-    _compiled: bool = False
-else:  # pragma: no cover
-    try:
-        _compiled = cython.compiled
-    except AttributeError:
-        _compiled = False
+_compiled: bool = False
 
 
 UNION_TYPES: Set[Any] = {Union}
