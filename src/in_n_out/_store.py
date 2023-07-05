@@ -12,6 +12,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    ClassVar,
     ContextManager,
     Iterable,
     Literal,
@@ -32,8 +33,6 @@ logger = getLogger("in_n_out")
 
 
 if TYPE_CHECKING:
-    from inspect import Signature
-
     from typing_extensions import ParamSpec
 
     from ._type_resolution import RaiseWarnReturnIgnore
@@ -125,7 +124,7 @@ class Store:
     """A Store is a collection of providers and processors."""
 
     _NULL = _NullSentinel()
-    _instances: dict[str, Store] = {}
+    _instances: ClassVar[dict[str, Store]] = {}
 
     @classmethod
     def create(cls, name: str) -> Store:
@@ -613,7 +612,7 @@ class Store:
     @overload
     def inject(
         self,
-        func: Literal[None] = None,
+        func: Literal[None] | None = None,
         *,
         providers: bool = True,
         processors: bool = False,
@@ -773,16 +772,15 @@ class Store:
                     args,
                     kwargs,
                 )
-                sig_ = cast("Signature", sig)  # mypy thinks sig is still optional
 
                 # use bind_partial to allow the caller to still provide their own args
                 # if desired. (i.e. the injected deps are only used if not provided)
-                bound = sig_.bind_partial(*args, **kwargs)
+                bound = sig.bind_partial(*args, **kwargs)
                 bound.apply_defaults()
 
                 # first, get and call the provider functions for each parameter type:
                 _injected_names: set[str] = set()
-                for param in sig_.parameters.values():
+                for param in sig.parameters.values():
                     if param.name not in bound.arguments:
                         provided = self.provide(param.annotation)
                         if provided is not None:
@@ -815,7 +813,7 @@ class Store:
                         else "NO arguments"
                     )
                     logger.exception(e)
-                    for param in sig_.parameters.values():
+                    for param in sig.parameters.values():
                         if (
                             param.name not in bound.arguments
                             and param.default is param.empty
@@ -873,7 +871,7 @@ class Store:
     @overload
     def inject_processors(
         self,
-        func: Literal[None] = None,
+        func: Literal[None] | None = None,
         *,
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
