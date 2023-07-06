@@ -1,12 +1,7 @@
 # https://peps.python.org/pep-0517/
 [build-system]
-requires = [
-    "setuptools>=45",
-    "wheel",
-    "setuptools-scm>=6.2",
-    "Cython==3.0.0a11",
-]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
 # https://peps.python.org/pep-0621/
 [project]
@@ -15,7 +10,7 @@ description = " plugable dependency injection and result processing"
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "BSD 3-Clause License" }
-authors = [{ email = "talley.lambert@gmail.com" }, { name = "Talley Lambert" }]
+authors = [{ email = "talley.lambert@gmail.com", name = "Talley Lambert" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: BSD License",
@@ -24,9 +19,21 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Typing :: Typed",
 ]
 dynamic = ["version"]
 dependencies = []
+
+# https://hatch.pypa.io/latest/config/metadata/
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests"]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src"]
+sources = ["src"]
 
 # extras
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies
@@ -34,15 +41,8 @@ dependencies = []
 test = ["pytest>=6.0", "pytest-cov", "toolz", "pytest-codspeed"]
 dev = [
     "black",
-    "cruft",
-    "flake8-bugbear",
-    "flake8-docstrings",
-    "flake8-pyprojecttoml",
-    "flake8-typing-imports",
-    "flake8-walrus",         # cause cython
-    "flake8",
+    "ruff",
     "ipython",
-    "isort",
     "mypy",
     "pdbpp",
     "pre-commit",
@@ -51,39 +51,18 @@ dev = [
     "pytest",
     "rich",
 ]
-build = ["Cython==3.0.0a11;sys_platform != 'win32'"]
 
 [project.urls]
 homepage = "https://github.com/pyapp-kit/in-n-out"
 repository = "https://github.com/pyapp-kit/in-n-out"
-
-# same as console_scripts entry point
-# [project.scripts]
-# spam-cli = "spam:main_cli"
-
-# Entry points
-# https://peps.python.org/pep-0621/#entry-points
-# [project.entry-points."spam.magical"]
-# tomatoes = "spam:main_tomatoes"
-
-# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html
-[tool.setuptools]
-zip-safe = false
-include-package-data = true
-packages = { find = { where = ["src"], exclude = [] } }
-
-[tool.setuptools.package-data]
-"*" = ["py.typed"]
-
-# https://github.com/pypa/setuptools_scm/#pyprojecttoml-usage
-[tool.setuptools_scm]
+documentation = "https://pyapp-kit.github.io/in-n-out"
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]
 target-version = "py38"
-extend-select = [
+select = [
     "E",    # style errors
     "F",    # flakes
     "D",    # pydocstyle
@@ -96,7 +75,7 @@ extend-select = [
     "RUF",  # ruff-specific rules
     "TCH",  # flake8-typing-imports
 ]
-extend-ignore = [
+ignore = [
     "D100", # Missing docstring in public module
     "D107", # Missing docstring in __init__
     "D203", # 1 blank line required before class docstring
@@ -143,16 +122,8 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["cython"]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
 module = ["tests"]
 disallow_untyped_defs = false
-
-# https://github.com/cruft/cruft
-[tool.cruft]
-skip = ["tests"]
 
 # https://github.com/mgedmin/check-manifest#configuration
 [tool.check-manifest]
@@ -169,23 +140,3 @@ ignore = [
     "benchmarks/**/*",
     "CHANGELOG.md",
 ]
-
-# https://python-semantic-release.readthedocs.io/en/latest/configuration.html
-[tool.semantic_release]
-version_source = "tag_only"
-branch = "main"
-changelog_sections = "feature,fix,breaking,documentation,performance,chore,:boom:,:sparkles:,:children_crossing:,:lipstick:,:iphone:,:egg:,:chart_with_upwards_trend:,:ambulance:,:lock:,:bug:,:zap:,:goal_net:,:alien:,:wheelchair:,:speech_balloon:,:mag:,:apple:,:penguin:,:checkered_flag:,:robot:,:green_apple:,Other"
-# commit_parser=semantic_release.history.angular_parser
-build_command = "pip install build && python -m build"
-
-
-[tool.cibuildwheel]
-# Skip 32-bit builds & PyPy wheels on all platforms
-skip = ["*-win32", "pp*"]
-test-extras = ["test"]
-test-command = "pytest {project}/tests -v"
-test-skip = "*-musllinux* *-manylinux_i686"
-
-
-[tool.cibuildwheel.macos]
-archs = ["x86_64", "arm64"]
