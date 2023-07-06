@@ -1,8 +1,17 @@
 # Changelog
 
-## [0.1.7](https://github.com/pyapp-kit/in-n-out/tree/0.1.7) (2023-02-27)
+## [v0.1.8](https://github.com/pyapp-kit/in-n-out/tree/v0.1.8) (2023-07-06)
 
-[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.6...0.1.7)
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.7...v0.1.8)
+
+**Merged pull requests:**
+
+- build: remove cython stuff [\#66](https://github.com/pyapp-kit/in-n-out/pull/66) ([tlambert03](https://github.com/tlambert03))
+- chore: Add error message when injector cannot determine parameter [\#63](https://github.com/pyapp-kit/in-n-out/pull/63) ([Czaki](https://github.com/Czaki))
+
+## [v0.1.7](https://github.com/pyapp-kit/in-n-out/tree/v0.1.7) (2023-02-27)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.6...v0.1.7)
 
 **Implemented enhancements:**
 
