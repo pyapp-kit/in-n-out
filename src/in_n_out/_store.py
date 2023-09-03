@@ -547,9 +547,9 @@ class Store:
         raise_exception: bool = False,
         _funcname: str = "",
     ) -> None:
-        """Provide an instance of `type_`.
+        """Process an instance of `type_`.
 
-        This will iterate over all providers of `type_` and invoke the first
+        This will iterate over all processors of `type_` and invoke the first
         one that accepts `result`, unless `first_processor_only` is set to `False`,
         in which case all processors will be invoked.
 
