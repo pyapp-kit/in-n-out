@@ -1,5 +1,25 @@
 # Changelog
 
+## [v0.1.9](https://github.com/pyapp-kit/in-n-out/tree/v0.1.9) (2023-10-10)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.8...v0.1.9)
+
+**Implemented enhancements:**
+
+- feat: support py312 [\#73](https://github.com/pyapp-kit/in-n-out/pull/73) ([tlambert03](https://github.com/tlambert03))
+
+**Fixed bugs:**
+
+- fix: pass globals through signature resolution [\#75](https://github.com/pyapp-kit/in-n-out/pull/75) ([tlambert03](https://github.com/tlambert03))
+
+**Documentation:**
+
+- docs: Fix typos in \_store.py [\#69](https://github.com/pyapp-kit/in-n-out/pull/69) ([lucyleeow](https://github.com/lucyleeow))
+
+**Merged pull requests:**
+
+- ci\(dependabot\): bump actions/checkout from 3 to 4 [\#70](https://github.com/pyapp-kit/in-n-out/pull/70) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [v0.1.8](https://github.com/pyapp-kit/in-n-out/tree/v0.1.8) (2023-07-06)
 
 [Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.7...v0.1.8)
