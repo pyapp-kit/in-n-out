@@ -75,6 +75,7 @@ def resolve_type_hints(
 
 def resolve_single_type_hints(
     *objs: Any,
+    globalns: dict | None = None,
     localns: dict | None = None,
     include_extras: bool = False,
 ) -> tuple[Any, ...]:
@@ -99,7 +100,9 @@ def resolve_single_type_hints(
     """
     annotations = {str(n): v for n, v in enumerate(objs)}
     mock_obj = type("_T", (), {"__annotations__": annotations})()
-    hints = resolve_type_hints(mock_obj, localns=localns, include_extras=include_extras)
+    hints = resolve_type_hints(
+        mock_obj, globalns=globalns, localns=localns, include_extras=include_extras
+    )
     return tuple(hints[k] for k in annotations)
 
 
@@ -184,6 +187,7 @@ def type_resolved_signature(
             ) from err
         hints = _resolve_params_one_by_one(
             sig,
+            globalns=getattr(func, "__globals__", None),
             localns=localns,
             exclude_unresolved_mandatory=not raise_unresolved_required_args,
         )
@@ -200,6 +204,7 @@ def type_resolved_signature(
 
 def _resolve_params_one_by_one(
     sig: Signature,
+    globalns: dict | None = None,
     localns: dict | None = None,
     exclude_unresolved_optionals: bool = False,
     exclude_unresolved_mandatory: bool = False,
@@ -215,6 +220,8 @@ def _resolve_params_one_by_one(
     ----------
     sig : Signature
         :class:`inspect.Signature` object with unresolved type annotations.
+    globalns : Optional[dict]
+        Optional global namespace for name resolution, by default None
     localns : Optional[dict]
         Optional local namespace for name resolution, by default None
     exclude_unresolved_optionals : bool
@@ -239,9 +246,9 @@ def _resolve_params_one_by_one(
         if param.annotation is sig.empty:
             continue  # pragma: no cover
         try:
-            hints[name] = resolve_single_type_hints(param.annotation, localns=localns)[
-                0
-            ]
+            hints[name] = resolve_single_type_hints(
+                param.annotation, globalns=globalns, localns=localns
+            )[0]
         except NameError as e:
             if (
                 param.default is param.empty
@@ -257,7 +264,7 @@ def _resolve_params_one_by_one(
     if sig.return_annotation is not sig.empty:
         try:
             hints["return"] = resolve_single_type_hints(
-                sig.return_annotation, localns=localns
+                sig.return_annotation, globalns=globalns, localns=localns
             )[0]
         except NameError:
             if not exclude_unresolved_optionals:
