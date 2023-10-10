@@ -50,7 +50,7 @@ def test_resolve_single_type_hints():
     )
 
 
-def test_type_resolved_signature2():
+def test_type_resolved_signature():
     sig = type_resolved_signature(basic_sig)
     assert sig.parameters["c"].annotation == Optional[float]
 
