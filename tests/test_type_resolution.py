@@ -149,3 +149,21 @@ def test_resolve_sig_or_inform():
 
     assert sig2.parameters["foo"].annotation == Foo
     assert sig2.parameters["bar"].annotation == "Bar"
+
+
+GlobalThing = int
+
+
+def test_type_resolved_signature_mixed_global() -> None:
+    """Test that we can resolve a mix of global annotations and missing forward refs."""
+
+    def myfun(a: "unknown", b: "GlobalThing"):  # type: ignore  # noqa
+        pass
+
+    _a = type_resolved_signature(
+        myfun,
+        raise_unresolved_optional_args=False,
+        raise_unresolved_required_args=False,
+    )
+    assert _a.parameters["a"].annotation == "unknown"
+    assert _a.parameters["b"].annotation == int
