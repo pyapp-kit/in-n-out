@@ -101,7 +101,7 @@ testpaths = ["tests"]
 filterwarnings = ["error"]
 
 [tool.coverage.run]
-source = ['src/in_n_out']
+source = ['in_n_out']
 command_line = "-m pytest"
 
 # https://coverage.readthedocs.io/en/6.4/config.html
@@ -113,6 +113,7 @@ exclude_lines = [
     "except ImportError",
 ]
 show_missing = true
+
 
 # https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
