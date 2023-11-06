@@ -116,3 +116,7 @@ def test_weakrefs_to_bound_methods(test_store: Store):
 
     assert not test_store._providers
     assert not test_store._processors
+
+
+def test_failure():
+    assert False

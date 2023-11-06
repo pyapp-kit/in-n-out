@@ -29,6 +29,7 @@ jobs:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
       pip-install-flags: ${{ github.event_name == 'schedule' && '--pre' || ''  }}
+      report-failures: true
     strategy:
       fail-fast: false
       matrix:
