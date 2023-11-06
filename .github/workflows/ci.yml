@@ -39,8 +39,8 @@ jobs:
   test-app-model:
     uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@v1
     with:
-      package_to_test: pyapp-kit/app-model
-      package-extras: "qt,test,test-qt"
+      dependency-repo: pyapp-kit/app-model
+      dependency-extras: "qt,test,test-qt"
       qt: "PyQt5"
 
   benchmarks:
