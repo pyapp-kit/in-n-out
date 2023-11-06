@@ -1,4 +1,13 @@
-"""plugable dependency injection and result processing."""
+"""plugable dependency injection and result processing.
+
+Generally speaking, providers and processors are defined as follows:
+
+- `Provider: TypeAlias = Callable[[], Any]`: a callable that can accept no arguments and
+  returns an instance of some type.  When we refer to a
+- `Processor: TypeAlias = Callable[[Any], Any]`: a callable that accepts a single
+  positional argument (an instance of some type) and returns anything (the return
+  value is ignored).
+"""
 
 from importlib.metadata import PackageNotFoundError, version
 
@@ -31,17 +40,17 @@ from ._type_resolution import (
 from ._util import _compiled
 
 __all__ = [
-    "register_provider",
     "_compiled",
+    "inject_processors",
     "inject",
     "iter_processors",
     "iter_providers",
-    "inject_processors",
-    "process",
     "mark_processor",
-    "provide",
     "mark_provider",
+    "process",
+    "provide",
     "register_processor",
+    "register_provider",
     "register",
     "register",
     "resolve_single_type_hints",

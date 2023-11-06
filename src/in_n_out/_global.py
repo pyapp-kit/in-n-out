@@ -53,6 +53,10 @@ def register(
     providers: ProviderIterable | None = None,
     store: str | Store | None = None,
 ) -> InjectionContext:
+    """Register multiple providers and/or processors in `store` or the global store.
+    
+    See [`Store.register`][in_n_out.Store.register] for details.
+    """
     return _store_or_global(store).register(providers=providers, processors=processors)
 
 
@@ -63,6 +67,10 @@ def register_provider(
     weight: float = 0,
     store: str | Store | None = None,
 ) -> InjectionContext:
+    """Register a provider in `store` or the global store.
+    
+    See [`Store.register_provider`][in_n_out.Store.register_provider] for details.
+    """
     return _store_or_global(store).register_provider(
         provider=provider, type_hint=type_hint, weight=weight
     )
@@ -75,6 +83,10 @@ def register_processor(
     weight: float = 0,
     store: str | Store | None = None,
 ) -> InjectionContext:
+    """Register a processor in `store` or the global store.
+    
+    See [`Store.register_processor`][in_n_out.Store.register_processor] for details.
+    """
     return _store_or_global(store).register_processor(
         processor=processor, type_hint=type_hint, weight=weight
     )
@@ -110,6 +122,10 @@ def mark_provider(
     type_hint: object | None = None,
     store: str | Store | None = None,
 ) -> Callable[[ProviderVar], ProviderVar] | ProviderVar:
+    """Decorate `func` as a provider in `store` or the global store.
+    
+    See [`Store.mark_provider`][in_n_out.Store.mark_provider] for details.    
+    """
     return _store_or_global(store).mark_provider(
         func, weight=weight, type_hint=type_hint
     )
@@ -145,6 +161,10 @@ def mark_processor(
     type_hint: object | None = None,
     store: str | Store | None = None,
 ) -> Callable[[ProcessorVar], ProcessorVar] | ProcessorVar:
+    """Decorate `func` as a processor in `store` or the global store.
+    
+    See [`Store.mark_processor`][in_n_out.Store.mark_processor] for details.
+    """
     return _store_or_global(store).mark_processor(
         func, weight=weight, type_hint=type_hint
     )
@@ -154,6 +174,10 @@ def mark_processor(
 def iter_providers(
     type_hint: object | type[T], store: str | Store | None = None
 ) -> Iterable[Callable[[], T | None]]:
+    """Iterate over all providers of `type_hint` in `store` or the global store.
+    
+    See [`Store.iter_providers`][in_n_out.Store.iter_providers] for details.
+    """
     return _store_or_global(store).iter_providers(type_hint)
 
 
@@ -161,6 +185,10 @@ def iter_providers(
 def iter_processors(
     type_hint: object | type[T], store: str | Store | None = None
 ) -> Iterable[Callable[[T], Any]]:
+    """Iterate over all processors of `type_hint` in `store` or the global store.
+    
+    See [`Store.iter_processors`][in_n_out.Store.iter_processors] for details.
+    """
     return _store_or_global(store).iter_processors(type_hint)
 
 
@@ -169,6 +197,10 @@ def provide(
     type_hint: object | type[T],
     store: str | Store | None = None,
 ) -> T | None:
+    """Provide an instance of `type_hint` with providers from `store` or the global store.
+    
+    See [`Store.provide`][in_n_out.Store.provide] for details.
+    """  # noqa: E501
     return _store_or_global(store).provide(type_hint=type_hint)
 
 
@@ -181,6 +213,10 @@ def process(
     raise_exception: bool = False,
     store: str | Store | None = None,
 ) -> None:
+    """Process an instance of `type_` with processors from `store` or the global store.
+    
+    See [`Store.process`][in_n_out.Store.process] for details.
+    """
     return _store_or_global(store).process(
         result=result,
         type_hint=type_hint,
@@ -234,6 +270,10 @@ def inject(
     guess_self: bool | None = None,
     store: str | Store | None = None,
 ) -> Callable[..., R] | Callable[[Callable[P, R]], Callable[..., R]]:
+    """Decorate `func` to inject dependencies at calltime from `store` or the global store.
+    
+    See [`Store.inject`][in_n_out.Store.inject] for details.
+    """  # noqa: E501
     return _store_or_global(store).inject(
         func=func,
         providers=providers,
@@ -278,6 +318,10 @@ def inject_processors(
     raise_exception: bool = False,
     store: str | Store | None = None,
 ) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]:
+    """Decorate a function to process its output from `store` or the global store.
+    
+    See [`Store.inject_processors`][in_n_out.Store.inject_processors] for details.
+    """
     return _store_or_global(store).inject_processors(
         func=func,
         type_hint=hint,

@@ -263,9 +263,9 @@ class Store:
 
         Parameters
         ----------
-        providers :Optional[CallbackIterable]
+        providers : CallbackIterable | None
             mapping or iterable of providers to register. See format in notes above.
-        processors :Optional[CallbackIterable]
+        processors : CallbackIterable | None
             mapping or iterable of processors to register. See format in notes above.
 
         Returns
@@ -302,7 +302,7 @@ class Store:
         ----------
         provider : Callable
             A provider callback. Must be able to accept no arguments.
-        type_hint : Optional[object]
+        type_hint : object | None
             A type or type hint that `provider` provides.  If not provided, it will
             be inferred from the return annotation of `provider`.
         weight : float, optional
@@ -382,9 +382,9 @@ class Store:
 
         Parameters
         ----------
-        func : Optional[Provider]
+        func : Provider | None
             A function to decorate. If not provided, a decorator is returned.
-        type_hint : Optional[object]
+        type_hint : object | None
             Optional type or type hint for which to register this provider. If not
             provided, the return annotation of `func` will be used.
         weight : float
@@ -393,7 +393,7 @@ class Store:
 
         Returns
         -------
-        Union[Callable[[Provider], Provider], Provider]
+        Callable[[Provider], Provider] | Provider
             If `func` is not provided, a decorator is returned, if `func` is provided
             then the function is returned..
 
@@ -444,9 +444,9 @@ class Store:
 
         Parameters
         ----------
-        func : Optional[Processor], optional
+        func : Processor | None
             A function to decorate. If not provided, a decorator is returned.
-        type_hint : Optional[object]
+        type_hint : object | None
             Optional type or type hint that this processor can handle. If not
             provided, the type hint of the first parameter of `func` will be used.
         weight : float, optional
@@ -457,7 +457,7 @@ class Store:
 
         Returns
         -------
-        Union[Callable[[Processor], Processor], Processor]
+        Callable[[Processor], Processor] | Processor
             If `func` is not provided, a decorator is returned, if `func` is provided
             then the function is returned.
 
@@ -486,12 +486,12 @@ class Store:
 
         Parameters
         ----------
-        type_hint : Union[object, Type[T]]
+        type_hint : object | Type[T]
             A type or type hint for which to return providers.
 
         Yields
         ------
-        Iterable[Callable[[], Optional[T]]]
+        Iterable[Callable[[], T | None]]
             Iterable of provider callbacks.
         """
         return self._iter_type_map(type_hint, self._cached_provider_map)
@@ -503,12 +503,12 @@ class Store:
 
         Parameters
         ----------
-        type_hint : Union[object, Type[T]]
+        type_hint : object | Type[T]
             A type or type hint for which to return processors.
 
         Yields
         ------
-        Iterable[Callable[[], Optional[T]]]
+        Iterable[Callable[[], T | None]]
             Iterable of processor callbacks.
         """
         return self._iter_type_map(type_hint, self._cached_processor_map)
@@ -523,12 +523,12 @@ class Store:
 
         Parameters
         ----------
-        type_hint : Union[object, Type[T]]
+        type_hint : object | Type[T]
             A type or type hint for which to return a value
 
         Returns
         -------
-        Optional[T]
+        T | None
             The first non-`None` value returned by a provider, or `None` if no
             providers return a value.
         """
@@ -557,7 +557,7 @@ class Store:
         ----------
         result : Any
             The result to process
-        type_hint : Union[object, Type[T], None],
+        type_hint : object | type[T] | None
             An optional type hint to provide to the processor.  If not provided,
             the type of `result` will be used.
         first_processor_only : bool, optional
@@ -660,41 +660,39 @@ class Store:
             this function is called. Important: this causes *side effects*. By default,
             `False`. Output processing can also be enabled (with additionl fine tuning)
             by using the `@store.process_result` decorator.
-        localns : Optional[dict]
+        localns : dict | None
             Optional local namespace for name resolution, by default None
         on_unresolved_required_args : RaiseWarnReturnIgnore
             What to do when a required parameter (one without a default) is encountered
             with an unresolvable type annotation.
             Must be one of the following (by default 'warn'):
 
-                - 'raise': immediately raise an exception
-                - 'warn': warn and return the original function
-                - 'return': return the original function without warning
-                - 'ignore': continue decorating without warning (at call time, this
-                    function will fail without additional arguments).
-
+            - `'raise'`: immediately raise an exception
+            - `'warn'`: warn and return the original function
+            - `'return'`: return the original function without warning
+            - `'ignore'`: continue decorating without warning (at call time, this
+                function will fail without additional arguments).
         on_unannotated_required_args : RaiseWarnReturnIgnore
             What to do when a required parameter (one without a default) is encountered
             with an *no* type annotation. These functions are likely to fail when called
             later if the required parameter is not provided.
             Must be one of the following (by default 'warn'):
 
-                - 'raise': immediately raise an exception
-                - 'warn': warn, but continue decorating
-                - 'return': immediately return the original function without warning
-                - 'ignore': continue decorating without warning.
-
+            - `'raise'`: immediately raise an exception
+            - `'warn'`: warn, but continue decorating
+            - `'return'`: immediately return the original function without warning
+            - `'ignore'`: continue decorating without warning.
         guess_self : bool
             Whether to infer the type of the first argument if the function is an
             unbound class method (by default, `True`) This is done as follows:
 
-                - if '.' (but not '<locals>') is in the function's __qualname__
-                - and if the first parameter is named 'self' or starts with "_"
-                - and if the first parameter annotation is `inspect.empty`
-                - then the name preceding `func.__name__` in the function's __qualname__
-                (which is usually the class name), is looked up in the function's
-                `__globals__` namespace. If found, it is used as the first parameter's
-                type annotation.
+            - if `'.'` (but not `'<locals>'`) is in the function's `__qualname__`
+            - and if the first parameter is named 'self' or starts with `"_"`
+            - and if the first parameter annotation is `inspect.empty`
+            - then the name preceding `func.__name__` in the function's `__qualname__`
+            (which is usually the class name), is looked up in the function's
+            `__globals__` namespace. If found, it is used as the first parameter's
+            type annotation.
 
             This allows class methods to be injected with instances of the class.
 
@@ -889,8 +887,8 @@ class Store:
     ) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]:
         """Decorate a function to process its output.
 
-        Variant of inject, but only injects processors (for the sake of more explicit
-        syntax).
+        Variant of [`inject`][in_n_out.Store.inject], but only injects processors
+        (for the sake of more explicit syntax).
 
         When the decorated function is called, the return value will be processed
         with `store.process(return_value)` before returning the result.
@@ -901,7 +899,7 @@ class Store:
         ----------
         func : Callable
             A function to decorate. Return hints are used to determine what to process.
-        type_hint : Union[object, Type[T], None]
+        type_hint : object | type[T] | None
             Type hint for the return value.  If not provided, the type will be inferred
             first from the return annotation of the function, and if that is not
             provided, from the `type(return_value)`.

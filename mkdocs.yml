@@ -1,0 +1,77 @@
+site_name: in-n-out
+site_url: https://github.com/pyapp-kit/in-n-out
+site_author: Talley Lambert
+site_description: Python dependency injection you can taste
+# strict: true
+
+repo_name: pyapp-kit/in-n-out
+repo_url: https://github.com/pyapp-kit/in-n-out
+
+copyright: Copyright &copy; 2021 - 2023 Talley Lambert
+
+watch:
+  - src
+
+nav:
+  - index.md
+  - getting_started.md
+  # defer to gen-files + literate-nav
+  - API reference: reference/
+
+plugins:
+  - search
+  - gen-files:
+      scripts:
+        - scripts/gen_ref_nav.py
+  - literate-nav:
+      nav_file: SUMMARY.txt
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          import:
+            - https://docs.python.org/3/objects.inv
+          options:
+            docstring_style: numpy
+            docstring_options:
+              ignore_init_summary: true
+            docstring_section_style: list
+            filters: ["!^_"]
+            heading_level: 1
+            inherited_members: true
+            merge_init_into_class: true
+            separate_signature: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            show_bases: true
+            show_source: true
+
+markdown_extensions:
+  - tables
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - admonition
+  - toc:
+      permalink: "#"
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+theme:
+  name: material
+  icon:
+    repo: material/github
+    logo: fontawesome/solid/syringe
+  features:
+    - navigation.instant
+    - navigation.indexes
+    - search.highlight
+    - search.suggest
+    - navigation.expand
+    - content.code.copy
+
+extra_css:
+  - css/style.css

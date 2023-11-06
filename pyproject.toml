@@ -52,11 +52,17 @@ dev = [
     "pytest",
     "rich",
 ]
+docs = [
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-material==9.4.1",
+    "mkdocs==1.5.3",
+    "mkdocstrings-python==1.7.3",
+]
 
 [project.urls]
 homepage = "https://github.com/pyapp-kit/in-n-out"
 repository = "https://github.com/pyapp-kit/in-n-out"
-documentation = "https://pyapp-kit.github.io/in-n-out"
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
