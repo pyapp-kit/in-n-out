@@ -45,15 +45,15 @@ def resolve_type_hints(
     This is a small wrapper around `typing.get_type_hints()` that adds
     namespaces to the global and local namespaces.
 
-    see docstring for :func:`typing.get_type_hints`.
+    see docstring for [`typing.get_type_hints`][typing.get_type_hints].
 
     Parameters
     ----------
     obj : module, class, method, or function
         must be a module, class, method, or function.
-    globalns : Optional[dict]
+    globalns : dict | None
         optional global namespace, by default None.
-    localns : Optional[dict]
+    localns : dict | None
         optional local namespace, by default None.
     include_extras : bool
         If `False` (the default), recursively replaces all 'Annotated[T, ...]'
@@ -61,7 +61,7 @@ def resolve_type_hints(
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         mapping of object name to type hint for all annotated attributes of `obj`.
     """
     _localns = dict(_typing_names())
@@ -81,20 +81,23 @@ def resolve_single_type_hints(
 ) -> tuple[Any, ...]:
     """Get type hints for one or more isolated type annotations.
 
-    Wrapper around :func:`resolve_type_hints` (see docstring for that function for
-    parameter docs).
+    Wrapper around [`resolve_type_hints`][in_n_out.resolve_type_hints]
+    (see docstring for that function for parameter docs).
 
-    `typing.get_type_hints()` only works for modules, classes, methods, or functions,
-    but the typing module doesn't make the underlying type evaluation logic publicly
-    available. This function creates a small mock object with an `__annotations__`
-    dict that will work as an argument to `typing.get_type_hints()`.  It then extracts
-    the resolved hints back into a tuple of hints corresponding to the input objects.
+    [`typing.get_type_hints`][typing.get_type_hints] only works for modules, classes,
+    methods, or functions, but the typing module doesn't make the underlying type
+    evaluation logic publicly available. This function creates a small mock object with
+    an `__annotations__` dict that will work as an argument to
+    `typing.get_type_hints()`.  It then extracts the resolved hints back into a tuple of
+    hints corresponding to the input objects.
 
     Returns
     -------
-    Tuple[Any, ...]
+    tuple[Any, ...]
         Tuple
 
+    Examples
+    --------
     >>> resolve_single_type_hints('hi', localns={'hi': typing.Any})
     (typing.Any,)
     """
@@ -120,7 +123,7 @@ def type_resolved_signature(
     ----------
     func : Callable
         A callable object.
-    localns : Optional[dict]
+    localns : dict | None
         Optional local namespace for name resolution, by default None
     raise_unresolved_optional_args : bool
         Whether to raise an exception when an optional parameter (one with a default
@@ -143,7 +146,8 @@ def type_resolved_signature(
     Returns
     -------
     Signature
-        :class:`inspect.Signature` object with fully resolved type annotations,
+        [`inspect.Signature`][inspect.Signature] object with fully resolved type
+        annotations,
         (or at least partially resolved type annotations if
         `raise_unresolved_optional_args` is `False`).
 
@@ -219,10 +223,11 @@ def _resolve_params_one_by_one(
     Parameters
     ----------
     sig : Signature
-        :class:`inspect.Signature` object with unresolved type annotations.
-    globalns : Optional[dict]
+        [`inspect.Signature`][inspect.Signature] object with unresolved type
+        annotations.
+    globalns : dict | None
         Optional global namespace for name resolution, by default None
-    localns : Optional[dict]
+    localns : dict | None
         Optional local namespace for name resolution, by default None
     exclude_unresolved_optionals : bool
         Whether to exclude parameters with unresolved type annotations that have a
@@ -233,7 +238,7 @@ def _resolve_params_one_by_one(
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         mapping of parameter name to type hint.
 
     Raises

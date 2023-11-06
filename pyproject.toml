@@ -52,11 +52,18 @@ dev = [
     "pytest",
     "rich",
 ]
+docs = [
+    "mkdocs-gen-files",
+    "mkdocs-literate-nav",
+    "mkdocs-material==9.4.1",
+    "mkdocs==1.5.3",
+    "mkdocstrings-python==1.7.3",
+]
 
 [project.urls]
 homepage = "https://github.com/pyapp-kit/in-n-out"
 repository = "https://github.com/pyapp-kit/in-n-out"
-documentation = "https://pyapp-kit.github.io/in-n-out"
+documentations = "https://ino.rtfd.io"
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
@@ -129,15 +136,16 @@ disallow_untyped_defs = false
 # https://github.com/mgedmin/check-manifest#configuration
 [tool.check-manifest]
 ignore = [
-    ".cruft.json",
-    ".flake8",
     ".github_changelog_generator",
     ".pre-commit-config.yaml",
     "tests/**/*",
+    "docs/**/*",
     "**/*.c",
     "Makefile",
     "codecov.yml",
+    "mkdocs.yml",
     "asv.conf.json",
     "benchmarks/**/*",
     "CHANGELOG.md",
+    ".readthedocs.yaml",
 ]
