@@ -111,7 +111,7 @@ print(get_things_name())  # prints "Thing"
     @store.inject
     def get_things_name(thing: Thing) -> str:
         return thing.name
-    
+
     print(get_things_name())  # prints "Thing"
     ```
 
@@ -195,7 +195,7 @@ get_things_name(Thing('Bob'))  # prints "Hello, Bob!"  (and still returns "Bob")
 
 ## Real world example
 
-Let's look at a more realistic example.  
+Let's look at a more realistic example.
 
 Suppose we have an application like a text editor or IDE that allows plugins to
 provide functionality like syntax highlighting, code completion, etc.  We might
