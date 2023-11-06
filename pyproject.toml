@@ -146,5 +146,5 @@ ignore = [
     "asv.conf.json",
     "benchmarks/**/*",
     "CHANGELOG.md",
-    "CHANGELOG.md",
+    ".readthedocs.yaml",
 ]
