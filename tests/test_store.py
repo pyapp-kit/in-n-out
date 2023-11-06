@@ -119,4 +119,4 @@ def test_weakrefs_to_bound_methods(test_store: Store):
 
 
 def test_failure():
-    assert False
+    raise AssertionError()
