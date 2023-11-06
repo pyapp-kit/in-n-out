@@ -63,6 +63,7 @@ docs = [
 [project.urls]
 homepage = "https://github.com/pyapp-kit/in-n-out"
 repository = "https://github.com/pyapp-kit/in-n-out"
+documentations = "https://ino.rtfd.io"
 
 # https://github.com/charliermarsh/ruff
 [tool.ruff]
