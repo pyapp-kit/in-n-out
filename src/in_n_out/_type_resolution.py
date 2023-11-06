@@ -30,7 +30,7 @@ def _typing_names() -> dict[str, Any]:
 
 def _unwrap_partial(func: Any) -> Any:
     while isinstance(func, PARTIAL_TYPES):
-        func = func.func
+        func = func.func  # type: ignore [attr-defined]
     return func
 
 
