@@ -2,14 +2,12 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [main]
+    tags: [v*]
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0" # every week (for --pre release tests)
+    - cron: "0 0 * * *" # run daily
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,91 +15,33 @@ concurrency:
 
 jobs:
   check-manifest:
-    name: Check Manifest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-      - run: pip install check-manifest && check-manifest
+      - run: pipx run check-manifest
 
   test:
-    name: ${{ matrix.platform }} (${{ matrix.python-version }})
-    runs-on: ${{ matrix.platform }}
+    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v1
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      pip-install-pre-release: ${{ github.event_name == 'schedule' }}
+      report-failures: ${{ github.event_name == 'schedule' }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.10", "3.11", "3.12"]
         include:
-          - python-version: "3.12"
+          - python-version: "3.9"
             platform: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install -e .[test] ${{ github.event_name == 'schedule' && '--pre' || ''  }}
-
-      - name: Test
-        run: pytest -v --cov=in_n_out --cov-report=xml --color=yes
-
-      # If something goes wrong, we can open an issue in the repo
-      - name: Report --pre Failures
-        if: failure() && github.event_name == 'schedule'
-        uses: JasonEtco/create-an-issue@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PLATFORM: ${{ matrix.platform }}
-          PYTHON: ${{ matrix.python-version }}
-          RUN_ID: ${{ github.run_id }}
-          TITLE: "[test-bot] pip install --pre is failing"
-        with:
-          filename: .github/TEST_FAIL_TEMPLATE.md
-          update_existing: true
-
-      - name: Coverage
-        uses: codecov/codecov-action@v3
-
-  test_app_model:
-    name: app-model
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          path: in-n-out
-
-      - uses: actions/checkout@v4
-        with:
-          repository: pyapp-kit/app-model
-          path: app-model
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-
-      - uses: tlambert03/setup-qt-libs@v1
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install -e in-n-out[test]
-          python -m pip install -e app-model[qt,test,test-qt]
-          python -m pip install PyQt5
-
-      - name: Test
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: python -m pytest app-model --color=yes
+  test-app-model:
+    uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@v1
+    with:
+      dependency-repo: pyapp-kit/app-model
+      dependency-extras: "qt,test,test-qt"
+      qt: "PyQt5"
 
   benchmarks:
     runs-on: ubuntu-latest
@@ -121,7 +61,7 @@ jobs:
 
   deploy:
     name: Deploy
-    needs: test
+    needs: [test, check-manifest]
     if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
     runs-on: ubuntu-latest
     permissions:
