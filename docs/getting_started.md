@@ -14,7 +14,7 @@ in `in-n-out` are *providers* and *processors*.
 
 A [`Store`][in_n_out.Store] is a collection of providers and processors.
 You will usually begin by creating a `Store` instance to manage your providers and
-processors.
+processors. More than one provider/processor can be registered per type.
 
 ```python
 from in_n_out import Store
@@ -38,7 +38,7 @@ store = Store.get_store('my-store')
 ## Registering Providers
 
 Dependency inject works by providing an instance of a type to a function
-or method that requires it.  Let's being by declaring some type that will be
+or method that requires it.  Let's begin by declaring some type that will be
 important to our application:
 
 ```python
@@ -97,7 +97,13 @@ get_things_name()
 # TypeError: get_things_name() missing 1 required positional argument: 'thing'
 ```
 
-We can use the [`Store.inject`][in_n_out.Store.inject] method to inject a `Thing` into the function:
+We can use the [`Store.inject`][in_n_out.Store.inject] method to inject a `Thing` into the function.
+More than one provider per type can be registered. The store will iterate through all
+providers registered for the required type, stopping at the first one that returns an
+object that is not `None`.
+
+Providers should return `None` if it is not able to provide the requested object as
+this allows `in-n-out` to continue iterating through any other registered providers:
 
 ```python
 get_things_name = store.inject(get_things_name)
@@ -110,7 +116,9 @@ print(get_things_name())  # prints "Thing"
     ```python
     @store.inject
     def get_things_name(thing: Thing) -> str:
-        return thing.name
+        if hasattr(thing, name):
+            return thing.name
+        return None
 
     print(get_things_name())  # prints "Thing"
     ```
@@ -130,8 +138,8 @@ give_me_a_string()
 
 ### Weights and provider priority
 
-You may register multiple providers for the same type.  In this case, the
-store will use the provider with the highest *weight*.
+When you are registering multiple providers for the same type, you can use the
+`weight` parameter to specify which providers should be tried first.
 
 ```python
 def give_me_another_thing() -> Thing:
@@ -171,8 +179,18 @@ print(get_things_name())  # prints "Another Thing"
 ## Processors
 
 Processors are functions that take an instance of a type and do something
-with it, usually for the purpose of side effects.  Processors are registered
-using the [`Store.register_processor`][in_n_out.Store.register_processor] method.
+with it, usually for the purpose of side effects. Like providers, you can register
+multiple processors per return type and the Store will iterate through all of
+them. [`Store.register_processor`][in_n_out.Store.register_processor] will also
+take a `weight` parameter that enables you to specify the order in which to
+'process' the return objects.
+
+If an error is raised when executing a processor, it will be passed as a warning
+after the final processor has been run.
+
+[`Store.inject_processors`][in_n_out.Store.inject_processors] will also take a
+`first_processor_only` parameter that can be used to specify that only the
+first processor should be used.
 
 ```python
 @store.inject_processors
