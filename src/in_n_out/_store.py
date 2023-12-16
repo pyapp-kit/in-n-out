@@ -1146,7 +1146,7 @@ def _validate_provider(obj: T | Callable[[], T]) -> Callable[[], T]:
     Can either be a function or an object. If a non-callable is passed, a function
     that returns it is created.
     """
-    return obj if callable(obj) else (lambda: cast(T, obj))
+    return obj if callable(obj) else (lambda: obj)
 
 
 def _validate_processor(obj: Callable[[T], Any]) -> Callable[[T], Any]:
