@@ -207,12 +207,13 @@ get_things_name(Thing('Bob'))  # prints "Hello, Bob!"  (and still returns "Bob")
 ### Multiple processors
 
 As with providers, you may register multiple processors per return type, and the
-`weight` parameter will be used to specify the order in which they should be run.
-(higher weights running first).
+`weight` parameter will be used to specify the order in which they should be run,
+with higher weights running first.
 
 The default behavior is to call all processors that have been registered for a
-given type. However, you can use the `first_processor_only` parameter when
+given type. However, you can use `first_processor_only=True` when
 injecting processors with [`Store.inject_processors`][in_n_out.Store.inject_processors]
+or when manually calling [`Store.process`][in_n_out.Store.process]
 to specify that only the first processor should be used.
 
 Note that all processors recieve the same object (the return value of the
@@ -220,7 +221,7 @@ function being injected into).  They are *not* chained, and any value returned
 by a processor will be ignored.
 
 If an unhandled exception is raised while executing a processor, it will be caught
-and a warning will be emitted, by default.  If you would prefer to handle raised
+and a warning will be emitted.  If you would prefer to handle raised
 exceptions yourself, you can pass `raise_exception=True` to
 [`Store.inject_processors`][in_n_out.Store.inject_processors].
 
