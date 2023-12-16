@@ -97,18 +97,20 @@ get_things_name()
 # TypeError: get_things_name() missing 1 required positional argument: 'thing'
 ```
 
-We can use the [`Store.inject`][in_n_out.Store.inject] method to inject a `Thing` into the function.
-More than one provider per type can be registered. The store will iterate through all
-providers registered for the required type, stopping at the first one that returns an
-object that is not `None`.
-
-Providers should return `None` if it is not able to provide the requested object as
-this allows `in-n-out` to continue iterating through any other registered providers:
+We can use the [`Store.inject`][in_n_out.Store.inject] method to inject a `Thing` into the function:
 
 ```python
 get_things_name = store.inject(get_things_name)
 print(get_things_name())  # prints "Thing"
 ```
+
+!!!note "multiple providers"
+    In the case that more one provider has been registered for a given type. The store will
+    iterate through all providers registered for the required type (ordered by [weight](#weights-and-provider-priority)), stopping at the first one that returns an object that
+    is not `None` .
+
+    Providers should return `None` if it is not able to provide the requested object as
+    this allows `in-n-out` to continue iterating through any other registered providers.
 
 !!!tip "decorators"
     As with registration functions, we can use `Store.inject` as a decorator:
@@ -138,8 +140,9 @@ give_me_a_string()
 
 ### Weights and provider priority
 
-When you are registering multiple providers for the same type, you can use the
-`weight` parameter to specify which providers should be tried first.
+When registering multiple providers for the same type, you can use the
+`weight` parameter to specify the order in which providers should be tried.
+(Providers with a higher weight will be tried first.)
 
 ```python
 def give_me_another_thing() -> Thing:
@@ -179,18 +182,8 @@ print(get_things_name())  # prints "Another Thing"
 ## Processors
 
 Processors are functions that take an instance of a type and do something
-with it, usually for the purpose of side effects. Like providers, you can register
-multiple processors per return type and the Store will iterate through all of
-them. [`Store.register_processor`][in_n_out.Store.register_processor] will also
-take a `weight` parameter that enables you to specify the order in which to
-'process' the return objects.
-
-If an error is raised when executing a processor, it will be passed as a warning
-after the final processor has been run.
-
-[`Store.inject_processors`][in_n_out.Store.inject_processors] will also take a
-`first_processor_only` parameter that can be used to specify that only the
-first processor should be used.
+with it, usually for the purpose of side effects.  Processors are registered
+using the [`Store.register_processor`][in_n_out.Store.register_processor] method.
 
 ```python
 @store.inject_processors
@@ -210,6 +203,26 @@ get_things_name(Thing('Bob'))  # prints "Hello, Bob!"  (and still returns "Bob")
     unusual to register a processor for something as common as `str` as we
     did above. Or, at the very least, we wouldn't inject processors into a
     function that returned `str`.
+
+### Multiple processors
+
+As with providers, you may register multiple processors per return type, and the
+`weight` parameter will be used to specify the order in which they should be run.
+(higher weights running first).
+
+The default behavior is to call all processors that have been registered for a
+given type. However, you can use the `first_processor_only` parameter when
+injecting processors with [`Store.inject_processors`][in_n_out.Store.inject_processors]
+to specify that only the first processor should be used.
+
+Note that all processors recieve the same object (the return value of the
+function being injected into).  They are *not* chained, and any value returned
+by a processor will be ignored.
+
+If an unhandled exception is raised while executing a processor, it will be caught
+and a warning will be emitted, by default.  If you would prefer to handle raised
+exceptions yourself, you can pass `raise_exception=True` to
+[`Store.inject_processors`][in_n_out.Store.inject_processors].
 
 ## Real world example
 
