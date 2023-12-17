@@ -118,9 +118,7 @@ print(get_things_name())  # prints "Thing"
     ```python
     @store.inject
     def get_things_name(thing: Thing) -> str:
-        if hasattr(thing, name):
-            return thing.name
-        return None
+        return thing.name
 
     print(get_things_name())  # prints "Thing"
     ```
