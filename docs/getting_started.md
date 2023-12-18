@@ -136,13 +136,13 @@ give_me_a_string()
 #   give_me_a_string() missing 1 required positional argument: 's'
 ```
 
-!!!note
+!!!note "function defaults"
     No dependency injection will be attempted for any parameters where a default value
     is given, e.g.,:
 
     ```python
     def get_things_name(thing: Thing = MyThing) -> str:
-    return thing.name
+        return thing.name
     ```
 
 ### Weights and provider priority
