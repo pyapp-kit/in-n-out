@@ -90,8 +90,7 @@ def test_unlikely_provider():
     with pytest.warns(UserWarning, match="has no return type hint"):
 
         @ino.mark_provider
-        def provides_int():
-            ...
+        def provides_int(): ...
 
     with pytest.raises(ValueError, match="has no return type hint"):
         ino.register_provider(lambda: None)

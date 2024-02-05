@@ -101,8 +101,7 @@ def test_injection_with_generator():
 def test_injection_without_args():
     """it just returns the same function"""
 
-    def f():
-        ...
+    def f(): ...
 
     assert inject(f) is f
 

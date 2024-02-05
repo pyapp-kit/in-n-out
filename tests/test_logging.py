@@ -18,8 +18,7 @@ def test_logging(caplog: "LogCaptureFixture") -> None:
     def p1() -> str:
         return VAL
 
-    def proc(x: str) -> None:
-        ...
+    def proc(x: str) -> None: ...
 
     ctx_a = ino.register(providers=[(p1, str)])
     assert caplog.records[0].message.startswith(

@@ -74,8 +74,7 @@ CallbackIterable = Union[ProviderIterable, ProcessorIterable]
 _GLOBAL = "global"
 
 
-class _NullSentinel:
-    ...
+class _NullSentinel: ...
 
 
 class _RegisteredCallback(NamedTuple):
@@ -355,8 +354,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> ProviderVar:
-        ...
+    ) -> ProviderVar: ...
 
     @overload
     def mark_provider(
@@ -365,8 +363,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> Callable[[ProviderVar], ProviderVar]:
-        ...
+    ) -> Callable[[ProviderVar], ProviderVar]: ...
 
     def mark_provider(
         self,
@@ -420,8 +417,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> ProcessorVar:
-        ...
+    ) -> ProcessorVar: ...
 
     @overload
     def mark_processor(
@@ -430,8 +426,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> Callable[[ProcessorVar], ProcessorVar]:
-        ...
+    ) -> Callable[[ProcessorVar], ProcessorVar]: ...
 
     def mark_processor(
         self,
@@ -620,8 +615,7 @@ class Store:
         on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
         on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
         guess_self: bool | None = None,
-    ) -> Callable[[Callable[P, R]], Callable[..., R]]:
-        ...
+    ) -> Callable[[Callable[P, R]], Callable[..., R]]: ...
 
     def inject(
         self,
@@ -863,8 +857,7 @@ class Store:
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
-    ) -> Callable[P, R]:
-        ...
+    ) -> Callable[P, R]: ...
 
     @overload
     def inject_processors(
@@ -874,8 +867,7 @@ class Store:
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
-    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
-        ...
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
     def inject_processors(
         self,
