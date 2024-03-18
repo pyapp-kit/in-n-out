@@ -1,17 +1,30 @@
 import functools
 from contextlib import nullcontext
 from inspect import isgeneratorfunction
-from typing import ContextManager, Generator, Optional
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    ContextManager,
+    Generator,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from unittest.mock import Mock
 
 import pytest
 
 from in_n_out import Store, _compiled, inject, inject_processors, register
 
+if TYPE_CHECKING:
+    from in_n_out._type_resolution import RaiseWarnReturnIgnore
+
+modes: Sequence["RaiseWarnReturnIgnore"] = ["raise", "warn", "return", "ignore"]
+
 
 def test_injection():
     @inject
-    def f(i: int, s: str):
+    def f(i: int, s: str) -> Tuple[int, str]:
         return (i, s)
 
     with register(providers={int: lambda: 1, str: lambda: "hi"}):
@@ -35,7 +48,7 @@ def test_inject_deps_and_providers(order):
         f = inject(inject_processors(f))
 
     with register(providers={int: lambda: 1}, processors={str: mock2}):
-        assert f() == "1"
+        assert f() == "1"  # type: ignore
         mock.assert_called_once_with(1)
         mock2.assert_called_once_with("1")
 
@@ -60,7 +73,7 @@ def test_inject_only_providers():
 
 def test_injection_missing():
     @inject
-    def f(x: int):
+    def f(x: int) -> int:
         return x
 
     with pytest.raises(TypeError, match="After injecting dependencies"):
@@ -90,7 +103,7 @@ def test_set_processor():
 
 def test_injection_with_generator():
     @inject
-    def f(x: int):
+    def f(x: int) -> Generator[int, None, None]:
         yield x
 
     # setting the accessor to our local viewer
@@ -101,31 +114,24 @@ def test_injection_with_generator():
 def test_injection_without_args():
     """it just returns the same function"""
 
-    def f():
-        ...
+    def f(): ...
 
     assert inject(f) is f
 
 
-modes = ["raise", "warn", "return", "ignore"]
-
-
-def unannotated(x) -> int:  # type: ignore
-    ...
-
-
-def unknown(v: "Unknown") -> int:  # type: ignore  # noqa
-    ...
-
-
-def unknown_and_unannotated(v: "Unknown", x) -> int:  # type: ignore  # noqa
-    ...
+def unannotated(x) -> int: ...  # type: ignore
+def unknown(v: "Unknown") -> int: ...  # type: ignore  #noqa
+def unknown_and_unannotated(v: "Unknown", x) -> int: ...  # type: ignore  #noqa
 
 
 @pytest.mark.parametrize("on_unresolved", modes)
 @pytest.mark.parametrize("on_unannotated", modes)
 @pytest.mark.parametrize("in_func", [unknown, unannotated, unknown_and_unannotated])
-def test_injection_errors(in_func, on_unresolved, on_unannotated):
+def test_injection_errors(
+    in_func: Callable,
+    on_unresolved: "RaiseWarnReturnIgnore",
+    on_unannotated: "RaiseWarnReturnIgnore",
+) -> None:
     ctx: ContextManager = nullcontext()
     ctxb: ContextManager = nullcontext()
     expect_same_func_back = False
@@ -165,7 +171,7 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
         assert (out_func is in_func) is expect_same_func_back
 
 
-def test_processors_not_passed_none(test_store: Store):
+def test_processors_not_passed_none(test_store: Store) -> None:
     @test_store.inject_processors
     def f(x: int) -> Optional[int]:
         return x if x > 5 else None
@@ -185,11 +191,11 @@ def test_processors_not_passed_none(test_store: Store):
         mock.assert_called_once_with(10)
 
 
-def test_optional_provider_with_required_arg(test_store: Store):
+def test_optional_provider_with_required_arg(test_store: Store) -> None:
     mock = Mock()
 
     @inject(store=test_store)
-    def f(x: int):
+    def f(x: int) -> None:
         mock(x)
 
     with test_store.register(providers={Optional[int]: lambda: None}):
@@ -234,7 +240,7 @@ def test_generators():
 
 
 def test_wrapped_functions():
-    def func(foo: Foo):
+    def func(foo: Foo) -> Foo:
         return foo
 
     @functools.wraps(func)
@@ -252,12 +258,12 @@ def test_wrapped_functions():
         assert injected() == foo
 
 
-def test_partial_annotations(test_store: Store):
-    def func(foo: "Foo", bar: "Bar"):  # noqa
+def test_partial_annotations(test_store: Store) -> None:
+    def func(foo: "Foo", bar: "Bar") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     # other way around
-    def func2(bar: "Bar", foo: "Foo"):  # noqa
+    def func2(bar: "Bar", foo: "Foo") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     with pytest.warns(UserWarning):
@@ -274,8 +280,7 @@ def test_partial_annotations(test_store: Store):
 
 
 def test_inject_into_required_optional() -> None:
-    class Thing:
-        ...
+    class Thing: ...
 
     def f(i: Optional[Thing]) -> Optional[Thing]:
         return i

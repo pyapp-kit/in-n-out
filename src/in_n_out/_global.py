@@ -99,8 +99,7 @@ def mark_provider(
     weight: float = 0,
     type_hint: object | None = None,
     store: str | Store | None = None,
-) -> ProviderVar:
-    ...
+) -> ProviderVar: ...
 
 
 @overload
@@ -110,8 +109,7 @@ def mark_provider(
     weight: float = 0,
     type_hint: object | None = None,
     store: str | Store | None = None,
-) -> Callable[[ProviderVar], ProviderVar]:
-    ...
+) -> Callable[[ProviderVar], ProviderVar]: ...
 
 
 @_add_store_to_doc
@@ -138,8 +136,7 @@ def mark_processor(
     weight: float = 0,
     type_hint: object | None = None,
     store: str | Store | None = None,
-) -> ProcessorVar:
-    ...
+) -> ProcessorVar: ...
 
 
 @overload
@@ -149,8 +146,7 @@ def mark_processor(
     weight: float = 0,
     type_hint: object | None = None,
     store: str | Store | None = None,
-) -> Callable[[ProcessorVar], ProcessorVar]:
-    ...
+) -> Callable[[ProcessorVar], ProcessorVar]: ...
 
 
 @_add_store_to_doc
@@ -172,7 +168,7 @@ def mark_processor(
 
 @_add_store_to_doc
 def iter_providers(
-    type_hint: object | type[T], store: str | Store | None = None
+    type_hint: type[T], store: str | Store | None = None
 ) -> Iterable[Callable[[], T | None]]:
     """Iterate over all providers of `type_hint` in `store` or the global store.
 
@@ -194,7 +190,7 @@ def iter_processors(
 
 @_add_store_to_doc
 def provide(
-    type_hint: object | type[T],
+    type_hint: type[T],
     store: str | Store | None = None,
 ) -> T | None:
     """Provide an instance of `type_hint` with providers from `store` or the global store.
@@ -254,8 +250,7 @@ def inject(
     on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
     guess_self: bool | None = None,
     store: str | Store | None = None,
-) -> Callable[[Callable[P, R]], Callable[..., R]]:
-    ...
+) -> Callable[[Callable[P, R]], Callable[..., R]]: ...
 
 
 @_add_store_to_doc
@@ -293,8 +288,7 @@ def inject_processors(
     first_processor_only: bool = False,
     raise_exception: bool = False,
     store: str | Store | None = None,
-) -> Callable[P, R]:
-    ...
+) -> Callable[P, R]: ...
 
 
 @overload
@@ -305,8 +299,7 @@ def inject_processors(
     first_processor_only: bool = False,
     raise_exception: bool = False,
     store: str | Store | None = None,
-) -> Callable[[Callable[P, R]], Callable[P, R]]:
-    ...
+) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
 
 @_add_store_to_doc

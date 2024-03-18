@@ -223,7 +223,7 @@ injecting processors with [`Store.inject_processors`][in_n_out.Store.inject_proc
 or when manually calling [`Store.process`][in_n_out.Store.process]
 to specify that only the first processor should be used.
 
-Note that all processors recieve the same object (the return value of the
+Note that all processors receive the same object (the return value of the
 function being injected into).  They are *not* chained, and any value returned
 by a processor will be ignored.
 

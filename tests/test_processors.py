@@ -33,7 +33,7 @@ def test_set_processors(type, process, ask_type):
     assert not list(ino.iter_processors(ask_type))
 
 
-def test_set_processors_cleanup(test_store: ino.Store):
+def test_set_processors_cleanup(test_store: ino.Store) -> None:
     """Test that we can set processors in contexts, and cleanup"""
     assert not list(test_store.iter_processors(int))
     mock = Mock()
@@ -59,13 +59,12 @@ def test_set_processors_cleanup(test_store: ino.Store):
     assert not list(test_store.iter_processors(int))
 
 
-def test_processor_decorator(test_store: ino.Store):
+def test_processor_decorator(test_store: ino.Store) -> None:
     """Test the @processor decorator."""
     assert not list(test_store.iter_processors(int))
 
     @test_store.mark_processor
-    def processes_int(x: int):
-        ...
+    def processes_int(x: int) -> None: ...
 
     assert next(test_store.iter_processors(int)) is processes_int
 
@@ -73,18 +72,17 @@ def test_processor_decorator(test_store: ino.Store):
     assert not list(test_store.iter_processors(int))
 
 
-def test_optional_processors(test_store: ino.Store):
+def test_optional_processors(test_store: ino.Store) -> None:
     """Test processing Optional[type]."""
     assert not list(test_store.iter_processors(Optional[int]))
     assert not list(test_store.iter_processors(str))
 
     @test_store.mark_processor
-    def processes_int(x: int):
+    def processes_int(x: int) -> Optional[int]:
         return 1
 
     @test_store.mark_processor  # these decorators are equivalent
-    def processes_string(x: str):
-        ...
+    def processes_string(x: str) -> None: ...
 
     # we don't have a processor guaranteed to take an int
     # assert not get_processor(int)
@@ -102,9 +100,9 @@ def test_optional_processors(test_store: ino.Store):
     assert next(test_store.iter_processors(Optional[int])) is processes_int
 
 
-def test_union_processors(test_store: ino.Store):
+def test_union_processors(test_store: ino.Store) -> None:
     @test_store.mark_processor
-    def processes_int_or_str(x: Union[int, str]):
+    def processes_int_or_str(x: Union[int, str]) -> int:
         return 1
 
     assert next(test_store.iter_processors(int)) is processes_int_or_str
@@ -114,21 +112,20 @@ def test_union_processors(test_store: ino.Store):
 def test_unlikely_processor():
     with pytest.warns(UserWarning, match="has no argument type hints"):
 
-        @ino.mark_processor
-        def provides_int():
-            ...
+        @ino.mark_processor  # type: ignore
+        def provides_int() -> None: ...
 
     with pytest.raises(ValueError, match="Processors must take at least one argument"):
-        ino.register(processors={int: lambda: 1})
+        ino.register(processors={int: lambda: 1})  # type: ignore
 
     with pytest.raises(ValueError, match="Processors must be callable"):
-        ino.register(processors={int: 1})
+        ino.register(processors={int: 1})  # type: ignore
 
 
 def test_global_register():
     mock = Mock()
 
-    def f(x: int):
+    def f(x: int) -> None:
         mock(x)
 
     ino.register_processor(f)
@@ -137,7 +134,7 @@ def test_global_register():
 
 
 def test_processor_provider_recursion() -> None:
-    """Make sure to avoid infinte recursion when a provider uses processors."""
+    """Make sure to avoid infinite recursion when a provider uses processors."""
 
     class Thing:
         count = 0
