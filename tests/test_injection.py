@@ -273,8 +273,7 @@ def test_partial_annotations(test_store: Store) -> None:
 
 
 def test_inject_into_required_optional() -> None:
-    class Thing:
-        ...
+    class Thing: ...
 
     def f(i: Optional[Thing]) -> Optional[Thing]:
         return i
