@@ -101,8 +101,7 @@ def test_injection_with_generator():
 def test_injection_without_args():
     """it just returns the same function"""
 
-    def f():
-        ...
+    def f(): ...
 
     assert inject(f) is f
 
@@ -271,3 +270,18 @@ def test_partial_annotations(test_store: Store):
     with test_store.register(providers={Foo: lambda: foo}):
         assert injected(bar=2) == (foo, 2)  # type: ignore
         assert injected2(2) == (foo, 2)  # type: ignore
+
+
+def test_inject_into_required_optional() -> None:
+    class Thing: ...
+
+    def f(i: int | None) -> int | None:
+        return i
+
+    with register(providers={Optional[Thing]: lambda: None}):
+        assert inject(f)() is None
+
+    thing = Thing()
+    with register(providers={Optional[Thing]: lambda: thing}):
+        assert inject(f)() is thing
+

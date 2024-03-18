@@ -27,7 +27,7 @@ from typing import (
 )
 
 from ._type_resolution import _resolve_sig_or_inform, resolve_type_hints
-from ._util import _split_union, issubclassable
+from ._util import _split_union, is_optional, issubclassable
 
 logger = getLogger("in_n_out")
 
@@ -783,7 +783,7 @@ class Store:
                 for param in sig.parameters.values():
                     if param.name not in bound.arguments:
                         provided = self.provide(param.annotation)
-                        if provided is not None:
+                        if is_optional(param.annotation) or provided is not None:
                             logger.debug(
                                 "  injecting %s: %s = %r",
                                 param.name,
