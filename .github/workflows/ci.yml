@@ -2,161 +2,52 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [main]
+    tags: [v*]
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0" # every week (for --pre release tests)
+    - cron: "0 0 * * *" # run daily
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-manifest:
-    name: Check Manifest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-      - run: pip install check-manifest && check-manifest
+      - uses: actions/checkout@v4
+      - run: pipx run check-manifest
 
   test:
-    name: ${{ matrix.platform }} (${{ matrix.python-version }})
-    runs-on: ${{ matrix.platform }}
+    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v1
+    with:
+      os: ${{ matrix.os }}
+      python-version: ${{ matrix.python-version }}
+      pip-install-pre-release: ${{ github.event_name == 'schedule' }}
+      report-failures: ${{ github.event_name == 'schedule' }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-        platform: [ubuntu-latest, macos-latest, windows-latest]
-
-    steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.11.0
-        with:
-          access_token: ${{ github.token }}
-
-      - uses: actions/checkout@v3
-
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install -e .[test] ${{ github.event_name == 'schedule' && '--pre' || ''  }}
-
-      - name: Test
-        run: pytest -v --cov=in_n_out --cov-report=xml --color=yes
-
-      # If something goes wrong, we can open an issue in the repo
-      - name: Report --pre Failures
-        if: failure() && github.event_name == 'schedule'
-        uses: JasonEtco/create-an-issue@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PLATFORM: ${{ matrix.platform }}
-          PYTHON: ${{ matrix.python-version }}
-          RUN_ID: ${{ github.run_id }}
-          TITLE: "[test-bot] pip install --pre is failing"
-        with:
-          filename: .github/TEST_FAIL_TEMPLATE.md
-          update_existing: true
-
-      - name: Coverage
-        uses: codecov/codecov-action@v3
-
-  test-compiled:
-    name: ${{ matrix.platform }} (${{ matrix.python-version }}-compiled)
-    runs-on: ${{ matrix.platform }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-        platform: ["ubuntu-latest"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.10", "3.11", "3.12"]
         include:
-          # - platform: "windows-latest"
-          #   python-version: "3.10"
-          - platform: "macos-latest"
-            python-version: "3.10"
+          - python-version: "3.9"
+            platform: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: install
-        run: |
-          python -m pip install -U wheel pip
-          pip install -e .[test,build]
-        env:
-          SKIP_CYTHON: 1
-
-      - name: compile
-        run: |
-          python setup.py build_ext --force --inplace --define CYTHON_TRACE
-          python -c "import sys, in_n_out; print('compiled:', in_n_out._compiled); sys.exit(0 if in_n_out._compiled else 1)"
-
-      - name: test
-        run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-report=term-missing
-
-      - name: remove compiled binaries
-        run: |
-          pip uninstall -y cython
-          rm -rf src/in_n_out/*.so src/in_n_out/*.c src/in_n_out/__pycache__
-
-      - name: test uncompiled
-        run: pytest --color=yes --cov=in_n_out --cov-report=xml --cov-append
-
-      - name: Coverage
-        uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
-          verbose: true
-
-  test_app_model:
-    name: app-model
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          path: in-n-out
-
-      - uses: actions/checkout@v3
-        with:
-          repository: pyapp-kit/app-model
-          path: app-model
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-
-      - uses: tlambert03/setup-qt-libs@v1
-
-      - name: Install dependencies
-        run: |
-          python -m pip install -U pip
-          python -m pip install -e in-n-out[test]
-          python -m pip install -e app-model[qt,test,test-qt]
-          python -m pip install PyQt5
-
-      - name: Test
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: python -m pytest app-model --color=yes
+  test-app-model:
+    uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@v1
+    with:
+      dependency-repo: pyapp-kit/app-model
+      dependency-extras: "qt,test,test-qt"
+      qt: "PyQt5"
 
   benchmarks:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -166,96 +57,37 @@ jobs:
           HATCH_BUILD_HOOKS_ENABLE: "1"
 
       - name: Run benchmarks
-        uses: CodSpeedHQ/action@v1
+        uses: CodSpeedHQ/action@v2
         with:
           run: pytest --codspeed -v --color=yes
 
-  # SKIPPING CYTHON WHEELS UNTIL # https://github.com/cython/cython/issues/4888
-  # build:
-  #   name: Build wheels on ${{ matrix.os }}
-  #   if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-  #   runs-on: ${{ matrix.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       os: [ubuntu-20.04, windows-2019, macos-10.15]
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - uses: actions/setup-python@v4
-  #       with:
-  #         python-version: "3.9"
-
-  #     - name: Build wheels
-  #       uses: pypa/cibuildwheel@v2.8.0
-
-  #     - uses: actions/upload-artifact@v3
-  #       with:
-  #         path: ./wheelhouse/*.whl
-
-  #     - name: Build sdist
-  #       if: matrix.os == 'ubuntu-20.04'
-  #       run: |
-  #         python -m pip install build
-  #         python -m build --sdist
-
-  #     - uses: actions/upload-artifact@v3
-  #       if: matrix.os == 'ubuntu-20.04'
-  #       with:
-  #         path: dist/*.tar.gz
-
-  # upload_pypi:
-  #   name: Deploy
-  #   needs: [check-manifest, build]
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags/v')
-  #   steps:
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: artifact
-  #         path: dist
-
-  #     - uses: pypa/gh-action-pypi-publish@v1.5.0
-  #       with:
-  #         user: __token__
-  #         password: ${{ secrets.pypi_token }}
-
-  #     - uses: softprops/action-gh-release@v1
-  #       with:
-  #         generate_release_notes: true
-
   deploy:
     name: Deploy
-    needs: test
+    needs: [test, check-manifest]
     if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
     runs-on: ubuntu-latest
-
+    permissions:
+      id-token: write
+      contents: write
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
-      - name: install
+      - name: Build
         run: |
-          git tag
-          pip install -U pip
-          pip install -U build twine
+          python -m pip install build
           python -m build
-          twine check dist/*
-          ls -lh dist
-        env:
-          SKIP_CYTHON: 1
 
-      - name: Build and publish
-        run: twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
 
-      - uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          files: dist/*

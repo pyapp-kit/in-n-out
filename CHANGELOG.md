@@ -1,8 +1,65 @@
 # Changelog
 
-## [0.1.7](https://github.com/pyapp-kit/in-n-out/tree/0.1.7) (2023-02-27)
+## [v0.2.0](https://github.com/pyapp-kit/in-n-out/tree/v0.2.0) (2024-03-18)
 
-[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.6...0.1.7)
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.9...v0.2.0)
+
+**Fixed bugs:**
+
+- fix: injecting None into takes optional [\#106](https://github.com/pyapp-kit/in-n-out/pull/106) ([tlambert03](https://github.com/tlambert03))
+
+**Documentation:**
+
+- docs: fix indent and add title to note in 'getting started' [\#100](https://github.com/pyapp-kit/in-n-out/pull/100) ([lucyleeow](https://github.com/lucyleeow))
+- docs: Add note on dependency injection when default given [\#99](https://github.com/pyapp-kit/in-n-out/pull/99) ([lucyleeow](https://github.com/lucyleeow))
+- docs: Expand processor/provider docs [\#98](https://github.com/pyapp-kit/in-n-out/pull/98) ([lucyleeow](https://github.com/lucyleeow))
+
+**Merged pull requests:**
+
+- chore: use ruff-format, general updates [\#107](https://github.com/pyapp-kit/in-n-out/pull/107) ([tlambert03](https://github.com/tlambert03))
+- ci\(dependabot\): bump softprops/action-gh-release from 1 to 2 [\#105](https://github.com/pyapp-kit/in-n-out/pull/105) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(dependabot\): bump actions/cache from 3 to 4 [\#103](https://github.com/pyapp-kit/in-n-out/pull/103) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(pre-commit.ci\): autoupdate [\#101](https://github.com/pyapp-kit/in-n-out/pull/101) ([pre-commit-ci[bot]](https://github.com/apps/pre-commit-ci))
+- ci\(dependabot\): bump actions/setup-python from 4 to 5 [\#97](https://github.com/pyapp-kit/in-n-out/pull/97) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(pre-commit.ci\): autoupdate [\#96](https://github.com/pyapp-kit/in-n-out/pull/96) ([pre-commit-ci[bot]](https://github.com/apps/pre-commit-ci))
+- ci\(dependabot\): bump CodSpeedHQ/action from 1 to 2 [\#95](https://github.com/pyapp-kit/in-n-out/pull/95) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(dependabot\): bump conda-incubator/setup-miniconda from 2 to 3 [\#94](https://github.com/pyapp-kit/in-n-out/pull/94) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(pre-commit.ci\): autoupdate [\#92](https://github.com/pyapp-kit/in-n-out/pull/92) ([pre-commit-ci[bot]](https://github.com/apps/pre-commit-ci))
+- docs: add documentation [\#77](https://github.com/pyapp-kit/in-n-out/pull/77) ([tlambert03](https://github.com/tlambert03))
+- ci: use reusable workflow [\#76](https://github.com/pyapp-kit/in-n-out/pull/76) ([tlambert03](https://github.com/tlambert03))
+
+## [v0.1.9](https://github.com/pyapp-kit/in-n-out/tree/v0.1.9) (2023-10-10)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.8...v0.1.9)
+
+**Implemented enhancements:**
+
+- feat: support py312 [\#73](https://github.com/pyapp-kit/in-n-out/pull/73) ([tlambert03](https://github.com/tlambert03))
+
+**Fixed bugs:**
+
+- fix: pass globals through signature resolution [\#75](https://github.com/pyapp-kit/in-n-out/pull/75) ([tlambert03](https://github.com/tlambert03))
+
+**Documentation:**
+
+- docs: Fix typos in \_store.py [\#69](https://github.com/pyapp-kit/in-n-out/pull/69) ([lucyleeow](https://github.com/lucyleeow))
+
+**Merged pull requests:**
+
+- ci\(dependabot\): bump actions/checkout from 3 to 4 [\#70](https://github.com/pyapp-kit/in-n-out/pull/70) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [v0.1.8](https://github.com/pyapp-kit/in-n-out/tree/v0.1.8) (2023-07-06)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.7...v0.1.8)
+
+**Merged pull requests:**
+
+- build: remove cython stuff [\#66](https://github.com/pyapp-kit/in-n-out/pull/66) ([tlambert03](https://github.com/tlambert03))
+- chore: Add error message when injector cannot determine parameter [\#63](https://github.com/pyapp-kit/in-n-out/pull/63) ([Czaki](https://github.com/Czaki))
+
+## [v0.1.7](https://github.com/pyapp-kit/in-n-out/tree/v0.1.7) (2023-02-27)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.6...v0.1.7)
 
 **Implemented enhancements:**
 

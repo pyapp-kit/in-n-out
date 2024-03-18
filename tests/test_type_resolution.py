@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
 
 import pytest
 
@@ -11,16 +11,9 @@ from in_n_out import (
 from in_n_out._type_resolution import _resolve_sig_or_inform
 
 
-def basic_sig(a: "int", b: "str", c: "Optional[float]" = None) -> int:
-    ...
-
-
-def requires_unknown(param: "Unknown", x) -> "Unknown":  # type: ignore # noqa
-    ...
-
-
-def optional_unknown(param: "Unknown" = 1) -> "Unknown":  # type: ignore # noqa
-    ...
+def basic_sig(a: "int", b: "str", c: "Optional[float]" = None) -> int: ...  # type: ignore
+def requires_unknown(param: "Unknown", x) -> "Unknown": ...  # type: ignore # noqa
+def optional_unknown(param: "Unknown" = 1) -> "Unknown": ...  # type: ignore # noqa
 
 
 def test_resolve_type_hints():
@@ -78,52 +71,53 @@ def test_type_resolved_signature():
 def test_partial_resolution() -> None:
     from functools import partial
 
-    def func(x: int, y: str, z: list):
-        ...
+    def func(x: int, y: str, z: list) -> Any: ...
 
     pf = partial(func, 1)
     ppf = partial(pf, z=["hi"])
 
-    assert resolve_type_hints(ppf) == {"x": int, "y": str, "z": list}
+    assert resolve_type_hints(ppf) == {"return": Any, "x": int, "y": str, "z": list}
 
 
 def test_curry_resolution() -> None:
     toolz = pytest.importorskip("toolz")
 
-    @toolz.curry
-    def func2(x: int, y: str, z: list):
-        ...
+    @toolz.curry  # type: ignore
+    def func2(x: int, y: str, z: list) -> Any: ...
 
     pf = func2(x=1)
     ppf = pf(z=["hi"])
 
-    assert resolve_type_hints(ppf) == {"x": int, "y": str, "z": list}
+    assert resolve_type_hints(ppf) == {"return": Any, "x": int, "y": str, "z": list}
 
 
 def test_wrapped_resolution() -> None:
     from functools import wraps
 
-    def func(x: int, y: str, z: list):
-        ...
+    def func(x: int, y: str, z: list) -> Any: ...
 
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         return func(*args, **kwargs)
 
     @wraps(wrapper)
     def wrapper2(*args, **kwargs):
         return wrapper(*args, **kwargs)
 
-    assert resolve_type_hints(wrapper2) == {"x": int, "y": str, "z": list}
+    assert resolve_type_hints(wrapper2) == {
+        "return": Any,
+        "x": int,
+        "y": str,
+        "z": list,
+    }
 
 
 def test_resolve_sig_or_inform():
     """Make sure we can partially resolve annotations."""
 
-    class Foo:
-        ...
+    class Foo: ...
 
-    def func(foo: "Foo", bar: "Bar"):  # noqa
+    def func(foo: "Foo", bar: "Bar") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     sig = _resolve_sig_or_inform(
@@ -133,11 +127,12 @@ def test_resolve_sig_or_inform():
         on_unannotated_required_args="ignore",
     )
 
+    assert sig
     assert sig.parameters["foo"].annotation == Foo
     assert sig.parameters["bar"].annotation == "Bar"
 
     # other way around
-    def func2(bar: "Bar", foo: "Foo"):  # noqa
+    def func2(bar: "Bar", foo: "Foo") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     sig2 = _resolve_sig_or_inform(
@@ -147,5 +142,24 @@ def test_resolve_sig_or_inform():
         on_unannotated_required_args="ignore",
     )
 
+    assert sig2
     assert sig2.parameters["foo"].annotation == Foo
     assert sig2.parameters["bar"].annotation == "Bar"
+
+
+GlobalThing = int
+
+
+def test_type_resolved_signature_mixed_global() -> None:
+    """Test that we can resolve a mix of global annotations and missing forward refs."""
+
+    def myfun(a: "unknown", b: "GlobalThing"):  # type: ignore  # noqa
+        pass
+
+    _a = type_resolved_signature(
+        myfun,
+        raise_unresolved_optional_args=False,
+        raise_unresolved_required_args=False,
+    )
+    assert _a.parameters["a"].annotation == "unknown"
+    assert _a.parameters["b"].annotation == int

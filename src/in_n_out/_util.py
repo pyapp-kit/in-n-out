@@ -1,15 +1,7 @@
 import types
 from typing import Any, List, Set, Tuple, Type, Union, cast, get_origin
 
-try:
-    import cython
-except ImportError:  # pragma: no cover
-    _compiled: bool = False
-else:  # pragma: no cover
-    try:
-        _compiled = cython.compiled
-    except AttributeError:
-        _compiled = False
+_compiled: bool = False
 
 
 UNION_TYPES: Set[Any] = {Union}
@@ -19,7 +11,13 @@ if hasattr(types, "UnionType"):
 
 
 def _is_union(type_: Any) -> bool:
+    """Return True if `type_` is a Union type."""
     return get_origin(type_) in UNION_TYPES
+
+
+def is_optional(type_: Any) -> bool:
+    """Return True if `type_` is Optional[T]."""
+    return _split_union(type_)[1]
 
 
 def _split_union(type_: Any) -> Tuple[List[Type], bool]:

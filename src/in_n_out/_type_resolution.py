@@ -30,7 +30,7 @@ def _typing_names() -> dict[str, Any]:
 
 def _unwrap_partial(func: Any) -> Any:
     while isinstance(func, PARTIAL_TYPES):
-        func = func.func
+        func = func.func  # type: ignore [attr-defined]
     return func
 
 
@@ -45,15 +45,15 @@ def resolve_type_hints(
     This is a small wrapper around `typing.get_type_hints()` that adds
     namespaces to the global and local namespaces.
 
-    see docstring for :func:`typing.get_type_hints`.
+    see docstring for [`typing.get_type_hints`][typing.get_type_hints].
 
     Parameters
     ----------
     obj : module, class, method, or function
         must be a module, class, method, or function.
-    globalns : Optional[dict]
+    globalns : dict | None
         optional global namespace, by default None.
-    localns : Optional[dict]
+    localns : dict | None
         optional local namespace, by default None.
     include_extras : bool
         If `False` (the default), recursively replaces all 'Annotated[T, ...]'
@@ -61,7 +61,7 @@ def resolve_type_hints(
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         mapping of object name to type hint for all annotated attributes of `obj`.
     """
     _localns = dict(_typing_names())
@@ -75,31 +75,37 @@ def resolve_type_hints(
 
 def resolve_single_type_hints(
     *objs: Any,
+    globalns: dict | None = None,
     localns: dict | None = None,
     include_extras: bool = False,
 ) -> tuple[Any, ...]:
     """Get type hints for one or more isolated type annotations.
 
-    Wrapper around :func:`resolve_type_hints` (see docstring for that function for
-    parameter docs).
+    Wrapper around [`resolve_type_hints`][in_n_out.resolve_type_hints]
+    (see docstring for that function for parameter docs).
 
-    `typing.get_type_hints()` only works for modules, classes, methods, or functions,
-    but the typing module doesn't make the underlying type evaluation logic publicly
-    available. This function creates a small mock object with an `__annotations__`
-    dict that will work as an argument to `typing.get_type_hints()`.  It then extracts
-    the resolved hints back into a tuple of hints corresponding to the input objects.
+    [`typing.get_type_hints`][typing.get_type_hints] only works for modules, classes,
+    methods, or functions, but the typing module doesn't make the underlying type
+    evaluation logic publicly available. This function creates a small mock object with
+    an `__annotations__` dict that will work as an argument to
+    `typing.get_type_hints()`.  It then extracts the resolved hints back into a tuple of
+    hints corresponding to the input objects.
 
     Returns
     -------
-    Tuple[Any, ...]
+    tuple[Any, ...]
         Tuple
 
-    >>> resolve_single_type_hints('hi', localns={'hi': typing.Any})
+    Examples
+    --------
+    >>> resolve_single_type_hints("hi", localns={"hi": typing.Any})
     (typing.Any,)
     """
     annotations = {str(n): v for n, v in enumerate(objs)}
     mock_obj = type("_T", (), {"__annotations__": annotations})()
-    hints = resolve_type_hints(mock_obj, localns=localns, include_extras=include_extras)
+    hints = resolve_type_hints(
+        mock_obj, globalns=globalns, localns=localns, include_extras=include_extras
+    )
     return tuple(hints[k] for k in annotations)
 
 
@@ -117,7 +123,7 @@ def type_resolved_signature(
     ----------
     func : Callable
         A callable object.
-    localns : Optional[dict]
+    localns : dict | None
         Optional local namespace for name resolution, by default None
     raise_unresolved_optional_args : bool
         Whether to raise an exception when an optional parameter (one with a default
@@ -140,7 +146,8 @@ def type_resolved_signature(
     Returns
     -------
     Signature
-        :class:`inspect.Signature` object with fully resolved type annotations,
+        [`inspect.Signature`][inspect.Signature] object with fully resolved type
+        annotations,
         (or at least partially resolved type annotations if
         `raise_unresolved_optional_args` is `False`).
 
@@ -184,6 +191,7 @@ def type_resolved_signature(
             ) from err
         hints = _resolve_params_one_by_one(
             sig,
+            globalns=getattr(func, "__globals__", None),
             localns=localns,
             exclude_unresolved_mandatory=not raise_unresolved_required_args,
         )
@@ -200,6 +208,7 @@ def type_resolved_signature(
 
 def _resolve_params_one_by_one(
     sig: Signature,
+    globalns: dict | None = None,
     localns: dict | None = None,
     exclude_unresolved_optionals: bool = False,
     exclude_unresolved_mandatory: bool = False,
@@ -214,8 +223,11 @@ def _resolve_params_one_by_one(
     Parameters
     ----------
     sig : Signature
-        :class:`inspect.Signature` object with unresolved type annotations.
-    localns : Optional[dict]
+        [`inspect.Signature`][inspect.Signature] object with unresolved type
+        annotations.
+    globalns : dict | None
+        Optional global namespace for name resolution, by default None
+    localns : dict | None
         Optional local namespace for name resolution, by default None
     exclude_unresolved_optionals : bool
         Whether to exclude parameters with unresolved type annotations that have a
@@ -226,7 +238,7 @@ def _resolve_params_one_by_one(
 
     Returns
     -------
-    Dict[str, Any]
+    dict[str, Any]
         mapping of parameter name to type hint.
 
     Raises
@@ -239,9 +251,9 @@ def _resolve_params_one_by_one(
         if param.annotation is sig.empty:
             continue  # pragma: no cover
         try:
-            hints[name] = resolve_single_type_hints(param.annotation, localns=localns)[
-                0
-            ]
+            hints[name] = resolve_single_type_hints(
+                param.annotation, globalns=globalns, localns=localns
+            )[0]
         except NameError as e:
             if (
                 param.default is param.empty
@@ -257,7 +269,7 @@ def _resolve_params_one_by_one(
     if sig.return_annotation is not sig.empty:
         try:
             hints["return"] = resolve_single_type_hints(
-                sig.return_annotation, localns=localns
+                sig.return_annotation, globalns=globalns, localns=localns
             )[0]
         except NameError:
             if not exclude_unresolved_optionals:
