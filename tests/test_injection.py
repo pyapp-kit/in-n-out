@@ -1,7 +1,7 @@
 import functools
 from contextlib import nullcontext
 from inspect import isgeneratorfunction
-from typing import ContextManager, Generator, Optional
+from typing import ContextManager, Generator, Optional, Tuple
 from unittest.mock import Mock
 
 import pytest
@@ -11,7 +11,7 @@ from in_n_out import Store, _compiled, inject, inject_processors, register
 
 def test_injection():
     @inject
-    def f(i: int, s: str):
+    def f(i: int, s: str) -> Tuple[int, str]:
         return (i, s)
 
     with register(providers={int: lambda: 1, str: lambda: "hi"}):
@@ -60,7 +60,7 @@ def test_inject_only_providers():
 
 def test_injection_missing():
     @inject
-    def f(x: int):
+    def f(x: int) -> int:
         return x
 
     with pytest.raises(TypeError, match="After injecting dependencies"):
@@ -106,7 +106,7 @@ def test_injection_without_args():
     assert inject(f) is f
 
 
-modes = ["raise", "warn", "return", "ignore"]
+m = ["raise", "warn", "return", "ignore"]
 
 
 def unannotated(x) -> int:  # type: ignore
@@ -252,11 +252,11 @@ def test_wrapped_functions():
 
 
 def test_partial_annotations(test_store: Store) -> None:
-    def func(foo: "Foo", bar: "Bar") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
+    def func(foo: "Foo", bar: "Bar") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     # other way around
-    def func2(bar: "Bar", foo: "Foo") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
+    def func2(bar: "Bar", foo: "Foo") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     with pytest.warns(UserWarning):
