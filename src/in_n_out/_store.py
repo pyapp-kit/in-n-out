@@ -775,7 +775,7 @@ class Store:
                 for param in sig.parameters.values():
                     if param.name not in bound.arguments:
                         provided = self.provide(param.annotation)
-                        if is_optional(param.annotation) or provided is not None:
+                        if provided is not None or is_optional(param.annotation):
                             logger.debug(
                                 "  injecting %s: %s = %r",
                                 param.name,
