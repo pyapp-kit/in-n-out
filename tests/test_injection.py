@@ -275,8 +275,13 @@ def test_partial_annotations(test_store: Store):
 def test_inject_into_required_optional() -> None:
     class Thing: ...
 
-    def f(i: int | None) -> int | None:
+    def f(i: Thing | None) -> Thing | None:
         return i
+
+    with pytest.raises(TypeError, match="missing 1 required positional argument"):
+        f()  # type: ignore
+
+    assert inject(f)() is None  # no provider needed
 
     with register(providers={Optional[Thing]: lambda: None}):
         assert inject(f)() is None
@@ -284,4 +289,3 @@ def test_inject_into_required_optional() -> None:
     thing = Thing()
     with register(providers={Optional[Thing]: lambda: thing}):
         assert inject(f)() is thing
-
