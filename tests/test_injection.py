@@ -277,7 +277,7 @@ def test_inject_into_required_optional() -> None:
     class Thing:
         ...
 
-    def f(i: Thing | None) -> Thing | None:
+    def f(i: Optional[Thing]) -> Optional[Thing]:
         return i
 
     with pytest.raises(TypeError, match="missing 1 required positional argument"):
