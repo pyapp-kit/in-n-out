@@ -139,7 +139,7 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
         if on_unresolved == "raise":
             ctx = pytest.raises(NameError, match=UNRESOLVED_MSG)
         elif on_unresolved == "warn":
-            ctx = pytest.warns(UserWarning, match=UNRESOLVED_MSG)
+            ctx = pytest.warns(UserWarning)  # will warn both
             if "unannotated" in in_func.__name__:
                 if on_unannotated == "raise":
                     ctxb = pytest.raises(TypeError, match=UNANNOTATED_MSG)
