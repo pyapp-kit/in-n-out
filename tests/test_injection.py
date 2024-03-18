@@ -14,7 +14,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from in_n_out import Store, _compiled, inject, inject_processors, register
+from in_n_out import Store, inject, inject_processors, register
 
 if TYPE_CHECKING:
     from in_n_out._type_resolution import RaiseWarnReturnIgnore
@@ -220,7 +220,7 @@ def test_inject_instance_into_unbound_method():
 
 
 # https://github.com/cython/cython/issues/4888
-@pytest.mark.xfail(bool(_compiled), reason="Cython doesn't support this")
+# @pytest.mark.xfail(bool(_compiled), reason="Cython doesn't support this")
 def test_generators():
     def generator_func() -> Generator:
         yield 1

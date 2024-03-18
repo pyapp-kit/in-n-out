@@ -1,18 +1,10 @@
-.PHONY: build build-trace check clean cleanc benchmark-all benchmark-compare
+.PHONY: build check clean benchmark-all benchmark-compare
 
 build:
-	python setup.py build_ext --inplace
-	cleanc
-
-build-trace:
-	python setup.py build_ext --force --inplace --define CYTHON_TRACE
-	cleanc
+	HATCH_BUILD_HOOKS_ENABLE=1 pip install -e .
 
 check:
 	pre-commit run --all-files
-
-cleanc:
-	rm -f src/in_n_out/*.c
 
 clean:
 	rm -rf `find . -name __pycache__`

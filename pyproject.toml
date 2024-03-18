@@ -1,6 +1,6 @@
 # https://peps.python.org/pep-0517/
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling>=1.8.0", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 # https://peps.python.org/pep-0621/
@@ -30,11 +30,12 @@ dependencies = []
 source = "vcs"
 
 [tool.hatch.build.targets.sdist]
-include = ["/src", "/tests"]
+include = ["src", "tests", "CHANGELOG.md"]
 
 [tool.hatch.build.targets.wheel]
 only-include = ["src"]
 sources = ["src"]
+
 
 # extras
 # https://peps.python.org/pep-0621/#dependencies-optional-dependencies
@@ -62,7 +63,21 @@ homepage = "https://github.com/pyapp-kit/in-n-out"
 repository = "https://github.com/pyapp-kit/in-n-out"
 documentations = "https://ino.rtfd.io"
 
-# https://docs.astral.sh/ruff
+
+[tool.hatch.build.targets.wheel.hooks.mypyc]
+mypy-args = ["--ignore-missing-imports"]
+enable-by-default = false
+require-runtime-dependencies = true
+dependencies = ["hatch-mypyc>=0.13.0", "mypy>=0.991"]
+include = [
+    'src/in_n_out/_store.py',
+    'src/in_n_out/_global.py',
+    'src/in_n_out/_type_resolution.py',
+    'src/in_n_out/_util.py',
+]
+
+
+# https://github.com/charliermarsh/ruff
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]
@@ -126,6 +141,10 @@ strict = true
 disallow_any_generics = false
 show_error_codes = true
 pretty = true
+
+[[tool.mypy.overrides]]
+module = ["cython", "toolz"]
+ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = ["tests.*"]

@@ -4,7 +4,7 @@ import contextlib
 import types
 import warnings
 import weakref
-from functools import cached_property, wraps
+from functools import wraps
 from inspect import CO_VARARGS, isgeneratorfunction, unwrap
 from logging import getLogger
 from types import CodeType
@@ -14,6 +14,7 @@ from typing import (
     Callable,
     ClassVar,
     ContextManager,
+    Generator,
     Iterable,
     Iterator,
     Literal,
@@ -33,14 +34,14 @@ from ._util import _split_union, is_optional, issubclassable
 logger = getLogger("in_n_out")
 
 
-if TYPE_CHECKING:
-    from typing_extensions import ParamSpec
+from typing_extensions import ParamSpec
 
+if TYPE_CHECKING:
     from ._type_resolution import RaiseWarnReturnIgnore
 
-    P = ParamSpec("P")
     R = TypeVar("R")
 
+P = ParamSpec("P")
 
 T = TypeVar("T")
 Provider = Callable[[], Any]  # provider should be able to take no arguments
@@ -79,7 +80,8 @@ CallbackIterable = Union[ProviderIterable, ProcessorIterable]
 _GLOBAL = "global"
 
 
-class _NullSentinel: ...
+class _NullSentinel:
+    pass
 
 
 class _RegisteredCallback(NamedTuple):
@@ -93,6 +95,14 @@ class _RegisteredCallback(NamedTuple):
 class _CachedMap(NamedTuple):
     all: dict[object, list[Processor | Provider]]
     subclassable: dict[type, list[Processor | Provider]]
+
+
+def fexec() -> int:
+    return 1
+
+
+def gexec() -> Generator[int, None, None]:
+    yield from (1, 2, 3)
 
 
 class InjectionContext(ContextManager):
@@ -127,7 +137,7 @@ class InjectionContext(ContextManager):
 class Store:
     """A Store is a collection of providers and processors."""
 
-    _NULL = _NullSentinel()
+    _NULL: ClassVar = _NullSentinel()
     _instances: ClassVar[dict[str, Store]] = {}
 
     @classmethod
@@ -214,6 +224,8 @@ class Store:
         self.on_unresolved_required_args: RaiseWarnReturnIgnore = "warn"
         self.on_unannotated_required_args: RaiseWarnReturnIgnore = "warn"
         self.guess_self: bool = True
+        self._cached_provider_map_: _CachedMap | None = None
+        self._cached_processor_map_: _CachedMap | None = None
 
     @property
     def name(self) -> str:
@@ -224,10 +236,8 @@ class Store:
         """Clear all providers and processors."""
         self._providers.clear()
         self._processors.clear()
-        with contextlib.suppress(AttributeError):
-            del self._cached_processor_map
-        with contextlib.suppress(AttributeError):
-            del self._cached_provider_map
+        self._cached_processor_map_ = None
+        self._cached_provider_map_ = None
 
     @property
     def namespace(self) -> dict[str, object]:
@@ -533,9 +543,9 @@ class Store:
             providers return a value.
         """
         for provider in self.iter_providers(type_hint):
-            result = provider()
+            result = cast("Any", provider())
             if result is not None:
-                return result
+                return cast("T", result)
         return None
 
     def process(
@@ -595,7 +605,7 @@ class Store:
     @overload
     def inject(
         self,
-        func: Callable[P, R],
+        func: Callable[..., R],
         *,
         providers: bool = True,
         processors: bool = False,
@@ -624,7 +634,7 @@ class Store:
 
     def inject(
         self,
-        func: Callable[P, R] | None = None,
+        func: Callable[..., R] | None = None,
         *,
         providers: bool = True,
         processors: bool = False,
@@ -632,7 +642,7 @@ class Store:
         on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
         on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
         guess_self: bool | None = None,
-    ) -> Callable[..., R] | Callable[[Callable[P, R]], Callable[..., R]]:
+    ) -> Callable[..., R] | Callable[[Callable[..., R]], Callable[..., R]]:
         """Decorate `func` to inject dependencies at calltime.
 
         Assuming `providers` is True (the default), this will attempt retrieve
@@ -728,7 +738,7 @@ class Store:
         _guess_self = guess_self or self.guess_self
 
         # inner decorator, allows for optional decorator arguments
-        def _inner(func: Callable[P, R]) -> Callable[P, R]:
+        def _inner(func: Callable[..., R]) -> Callable[..., R]:
             # if the function takes no arguments and has no return annotation
             # there's nothing to be done
             if not providers:
@@ -760,7 +770,7 @@ class Store:
 
             # get provider functions for each required parameter
             @wraps(func)
-            def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
+            def _exec(*args: Any, **kwargs: Any) -> R:
                 # we're actually calling the "injected function" now
                 logger.debug(
                     "Executing @injected %s%s with args: %r, kwargs: %r",
@@ -779,7 +789,7 @@ class Store:
                 _injected_names: set[str] = set()
                 for param in sig.parameters.values():
                     if param.name not in bound.arguments:
-                        provided = self.provide(param.annotation)
+                        provided: Any = self.provide(param.annotation)
                         if provided is not None or is_optional(param.annotation):
                             logger.debug(
                                 "  injecting %s: %s = %r",
@@ -827,16 +837,13 @@ class Store:
 
                 return result
 
-            out = _exec
-
             # if it came in as a generatorfunction, it needs to go out as one.
-            if isgeneratorfunction(func):
+            if not isgeneratorfunction(func):
+                out = _exec
+            else:
+                from ._uncompiled import _wrap_generator
 
-                @wraps(func)
-                def _gexec(*args: P.args, **kwargs: P.kwargs) -> R:  # type: ignore
-                    yield from _exec(*args, **kwargs)  # type: ignore
-
-                out = _gexec
+                out = _wrap_generator(func, _exec)  # type: ignore
 
             # update some metadata on the decorated function.
             out.__signature__ = sig  # type: ignore [attr-defined]
@@ -857,7 +864,7 @@ class Store:
     @overload
     def inject_processors(
         self,
-        func: Callable[P, R],
+        func: Callable[..., R],
         *,
         type_hint: type[T] | object | None = None,
         first_processor_only: bool = False,
@@ -876,12 +883,12 @@ class Store:
 
     def inject_processors(
         self,
-        func: Callable[P, R] | None = None,
+        func: Callable[..., R] | None = None,
         *,
         type_hint: type[T] | object | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
-    ) -> Callable[[Callable[P, R]], Callable[P, R]] | Callable[P, R]:
+    ) -> Callable[[Callable[..., R]], Callable[..., R]] | Callable[..., R]:
         """Decorate a function to process its output.
 
         Variant of [`inject`][in_n_out.Store.inject], but only injects processors
@@ -914,7 +921,7 @@ class Store:
             `store.process(return_value)`
         """
 
-        def _deco(func: Callable[P, R]) -> Callable[P, R]:
+        def _deco(func: Callable[..., R]) -> Callable[..., R]:
             if isgeneratorfunction(func):
                 raise TypeError(
                     "Cannot decorate a generator function with inject_processors"
@@ -927,7 +934,7 @@ class Store:
                     type_hint = annotations["return"]
 
             @wraps(func)
-            def _exec(*args: P.args, **kwargs: P.kwargs) -> R:
+            def _exec(*args: Any, **kwargs: Any) -> R:
                 result = func(*args, **kwargs)
                 if result is not None:
                     self.process(
@@ -945,15 +952,19 @@ class Store:
 
     # ----------------------  Private methods ----------------------- #
 
-    @cached_property
+    @property
     def _cached_provider_map(self) -> _CachedMap:
-        logger.debug("Rebuilding provider map cache")
-        return self._build_map(self._providers)
+        if self._cached_provider_map_ is None:
+            logger.debug("Rebuilding provider map cache")
+            self._cached_provider_map_ = self._build_map(self._providers)
+        return self._cached_provider_map_
 
-    @cached_property
+    @property
     def _cached_processor_map(self) -> _CachedMap:
-        logger.debug("Rebuilding processor map cache")
-        return self._build_map(self._processors)
+        if self._cached_processor_map_ is None:
+            logger.debug("Rebuilding processor map cache")
+            self._cached_processor_map_ = self._build_map(self._processors)
+        return self._cached_processor_map_
 
     def _build_map(self, registry: list[_RegisteredCallback]) -> _CachedMap:
         """Build a map of type hints to callbacks.
@@ -1038,7 +1049,7 @@ class Store:
 
         _callbacks: Iterable[CallbackTuple]
         if isinstance(callbacks, Mapping):
-            _callbacks = ((v, k) for k, v in callbacks.items())  # type: ignore  # dunno
+            _callbacks = callbacks.items()
         else:
             _callbacks = callbacks
 
@@ -1047,11 +1058,11 @@ class Store:
         for tup in _callbacks:
             callback, *rest = tup
             type_: THint | None = None
-            weight: float = 0
+            weight: float = 0.0
             if rest:
                 if len(rest) == 1:
                     type_ = rest[0]
-                    weight = 0
+                    weight = 0.0
                 elif len(rest) == 2:
                     type_, weight = cast(Tuple[Optional[THint], float], rest)
                 else:  # pragma: no cover
@@ -1102,15 +1113,11 @@ class Store:
                     logger.debug(
                         "Unregistering %s of %s: %s", regname, p.origin, p.callback
                     )
-            # attribute error in case the cache was never built
-            with contextlib.suppress(AttributeError):
-                delattr(self, cache_map)
+            setattr(self, cache_map + "_", None)
 
         if to_register:
             reg.extend(to_register)
-            # attribute error in case the cache was never built
-            with contextlib.suppress(AttributeError):
-                delattr(self, cache_map)
+            setattr(self, cache_map + "_", None)
 
         return _dispose
 
