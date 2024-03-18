@@ -11,8 +11,7 @@ from in_n_out import (
 from in_n_out._type_resolution import _resolve_sig_or_inform
 
 
-def basic_sig(a: "int", b: "str", c: "Optional[float]" = None) -> int:
-    ...
+def basic_sig(a: "int", b: "str", c: "Optional[float]" = None) -> int: ...
 
 
 def requires_unknown(param: "Unknown", x) -> "Unknown":  # type: ignore # noqa
@@ -78,8 +77,7 @@ def test_type_resolved_signature():
 def test_partial_resolution() -> None:
     from functools import partial
 
-    def func(x: int, y: str, z: list):
-        ...
+    def func(x: int, y: str, z: list): ...
 
     pf = partial(func, 1)
     ppf = partial(pf, z=["hi"])
@@ -91,8 +89,7 @@ def test_curry_resolution() -> None:
     toolz = pytest.importorskip("toolz")
 
     @toolz.curry
-    def func2(x: int, y: str, z: list):
-        ...
+    def func2(x: int, y: str, z: list): ...
 
     pf = func2(x=1)
     ppf = pf(z=["hi"])
@@ -103,8 +100,7 @@ def test_curry_resolution() -> None:
 def test_wrapped_resolution() -> None:
     from functools import wraps
 
-    def func(x: int, y: str, z: list):
-        ...
+    def func(x: int, y: str, z: list): ...
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -120,8 +116,7 @@ def test_wrapped_resolution() -> None:
 def test_resolve_sig_or_inform():
     """Make sure we can partially resolve annotations."""
 
-    class Foo:
-        ...
+    class Foo: ...
 
     def func(foo: "Foo", bar: "Bar"):  # noqa
         return foo, bar

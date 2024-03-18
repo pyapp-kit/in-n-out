@@ -22,8 +22,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 
-class G(Generic[T]):
-    ...
+class G(Generic[T]): ...
 
 
 nt = NewType("nt", int)

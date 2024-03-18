@@ -54,8 +54,7 @@ def test_store_clear(test_store: Store):
 
 
 def test_store_namespace(test_store: Store):
-    class T:
-        ...
+    class T: ...
 
     @mark_provider(store=test_store)
     def provide_t() -> T:

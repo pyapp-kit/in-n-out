@@ -1,4 +1,4 @@
-"""plugable dependency injection and result processing.
+"""pluggable dependency injection and result processing.
 
 Generally speaking, providers and processors are defined as follows:
 

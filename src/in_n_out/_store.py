@@ -74,8 +74,7 @@ CallbackIterable = Union[ProviderIterable, ProcessorIterable]
 _GLOBAL = "global"
 
 
-class _NullSentinel:
-    ...
+class _NullSentinel: ...
 
 
 class _RegisteredCallback(NamedTuple):
@@ -94,7 +93,7 @@ class _CachedMap(NamedTuple):
 class InjectionContext(ContextManager):
     """Context manager for registering callbacks.
 
-    Primarily used as `with store.regsiter(...)`.
+    Primarily used as `with store.register(...)`.
     """
 
     def __init__(
@@ -355,8 +354,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> ProviderVar:
-        ...
+    ) -> ProviderVar: ...
 
     @overload
     def mark_provider(
@@ -365,8 +363,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> Callable[[ProviderVar], ProviderVar]:
-        ...
+    ) -> Callable[[ProviderVar], ProviderVar]: ...
 
     def mark_provider(
         self,
@@ -420,8 +417,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> ProcessorVar:
-        ...
+    ) -> ProcessorVar: ...
 
     @overload
     def mark_processor(
@@ -430,8 +426,7 @@ class Store:
         *,
         type_hint: object | None = None,
         weight: float = 0,
-    ) -> Callable[[ProcessorVar], ProcessorVar]:
-        ...
+    ) -> Callable[[ProcessorVar], ProcessorVar]: ...
 
     def mark_processor(
         self,
@@ -620,8 +615,7 @@ class Store:
         on_unresolved_required_args: RaiseWarnReturnIgnore | None = None,
         on_unannotated_required_args: RaiseWarnReturnIgnore | None = None,
         guess_self: bool | None = None,
-    ) -> Callable[[Callable[P, R]], Callable[..., R]]:
-        ...
+    ) -> Callable[[Callable[P, R]], Callable[..., R]]: ...
 
     def inject(
         self,
@@ -716,12 +710,12 @@ class Store:
         TypeError: ... missing 1 required positional argument: 'thing'
 
         >>> # register a provider
-        >>> ino.register(providers={Thing: Thing('Thing1')})
+        >>> ino.register(providers={Thing: Thing("Thing1")})
         >>> print(func())
         'Thing1'
 
         >>> # can still override with parameters
-        >>> func(Thing('OtherThing'))
+        >>> func(Thing("OtherThing"))
         'OtherThing'
         """
         on_unres = on_unresolved_required_args or self.on_unresolved_required_args
@@ -745,7 +739,7 @@ class Store:
             # get a signature object with all type annotations resolved
             # this may result in a NameError if a required argument is unresolveable.
             # There may also be unannotated required arguments, which will likely fail
-            # when the function is called later. We break this out into a seperate
+            # when the function is called later. We break this out into a separate
             # function to handle notifying the user on these cases.
             sig = _resolve_sig_or_inform(
                 func,
@@ -863,8 +857,7 @@ class Store:
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
-    ) -> Callable[P, R]:
-        ...
+    ) -> Callable[P, R]: ...
 
     @overload
     def inject_processors(
@@ -874,8 +867,7 @@ class Store:
         type_hint: object | type[T] | None = None,
         first_processor_only: bool = False,
         raise_exception: bool = False,
-    ) -> Callable[[Callable[P, R]], Callable[P, R]]:
-        ...
+    ) -> Callable[[Callable[P, R]], Callable[P, R]]: ...
 
     def inject_processors(
         self,

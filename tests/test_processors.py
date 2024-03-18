@@ -64,8 +64,7 @@ def test_processor_decorator(test_store: ino.Store):
     assert not list(test_store.iter_processors(int))
 
     @test_store.mark_processor
-    def processes_int(x: int):
-        ...
+    def processes_int(x: int): ...
 
     assert next(test_store.iter_processors(int)) is processes_int
 
@@ -83,8 +82,7 @@ def test_optional_processors(test_store: ino.Store):
         return 1
 
     @test_store.mark_processor  # these decorators are equivalent
-    def processes_string(x: str):
-        ...
+    def processes_string(x: str): ...
 
     # we don't have a processor guaranteed to take an int
     # assert not get_processor(int)
@@ -115,8 +113,7 @@ def test_unlikely_processor():
     with pytest.warns(UserWarning, match="has no argument type hints"):
 
         @ino.mark_processor
-        def provides_int():
-            ...
+        def provides_int(): ...
 
     with pytest.raises(ValueError, match="Processors must take at least one argument"):
         ino.register(processors={int: lambda: 1})
@@ -137,7 +134,7 @@ def test_global_register():
 
 
 def test_processor_provider_recursion() -> None:
-    """Make sure to avoid infinte recursion when a provider uses processors."""
+    """Make sure to avoid infinite recursion when a provider uses processors."""
 
     class Thing:
         count = 0

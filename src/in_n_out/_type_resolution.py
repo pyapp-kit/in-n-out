@@ -98,7 +98,7 @@ def resolve_single_type_hints(
 
     Examples
     --------
-    >>> resolve_single_type_hints('hi', localns={'hi': typing.Any})
+    >>> resolve_single_type_hints("hi", localns={"hi": typing.Any})
     (typing.Any,)
     """
     annotations = {str(n): v for n, v in enumerate(objs)}
