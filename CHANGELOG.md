@@ -16,6 +16,7 @@
 
 **Merged pull requests:**
 
+- fix: fix ci [\#108](https://github.com/pyapp-kit/in-n-out/pull/108) ([tlambert03](https://github.com/tlambert03))
 - chore: use ruff-format, general updates [\#107](https://github.com/pyapp-kit/in-n-out/pull/107) ([tlambert03](https://github.com/tlambert03))
 - ci\(dependabot\): bump softprops/action-gh-release from 1 to 2 [\#105](https://github.com/pyapp-kit/in-n-out/pull/105) ([dependabot[bot]](https://github.com/apps/dependabot))
 - ci\(dependabot\): bump actions/cache from 3 to 4 [\#103](https://github.com/pyapp-kit/in-n-out/pull/103) ([dependabot[bot]](https://github.com/apps/dependabot))
