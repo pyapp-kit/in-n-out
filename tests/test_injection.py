@@ -138,7 +138,7 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
         if on_unresolved == "raise":
             ctx = pytest.raises(NameError, match=UNRESOLVED_MSG)
         elif on_unresolved == "warn":
-            ctx = pytest.warns(UserWarning, match=UNRESOLVED_MSG)
+            ctx = pytest.warns(UserWarning)  # will warn both
             if "unannotated" in in_func.__name__:
                 if on_unannotated == "raise":
                     ctxb = pytest.raises(TypeError, match=UNANNOTATED_MSG)
@@ -270,3 +270,23 @@ def test_partial_annotations(test_store: Store) -> None:
     with test_store.register(providers={Foo: lambda: foo}):
         assert injected(bar=2) == (foo, 2)  # type: ignore
         assert injected2(2) == (foo, 2)  # type: ignore
+
+
+def test_inject_into_required_optional() -> None:
+    class Thing:
+        ...
+
+    def f(i: Optional[Thing]) -> Optional[Thing]:
+        return i
+
+    with pytest.raises(TypeError, match="missing 1 required positional argument"):
+        f()  # type: ignore
+
+    assert inject(f)() is None  # no provider needed
+
+    with register(providers={Optional[Thing]: lambda: None}):
+        assert inject(f)() is None
+
+    thing = Thing()
+    with register(providers={Optional[Thing]: lambda: thing}):
+        assert inject(f)() is thing
