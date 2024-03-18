@@ -1,5 +1,33 @@
 # Changelog
 
+## [v0.2.0](https://github.com/pyapp-kit/in-n-out/tree/v0.2.0) (2024-03-18)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.9...v0.2.0)
+
+**Fixed bugs:**
+
+- fix: injecting None into takes optional [\#106](https://github.com/pyapp-kit/in-n-out/pull/106) ([tlambert03](https://github.com/tlambert03))
+
+**Documentation:**
+
+- docs: fix indent and add title to note in 'getting started' [\#100](https://github.com/pyapp-kit/in-n-out/pull/100) ([lucyleeow](https://github.com/lucyleeow))
+- docs: Add note on dependency injection when default given [\#99](https://github.com/pyapp-kit/in-n-out/pull/99) ([lucyleeow](https://github.com/lucyleeow))
+- docs: Expand processor/provider docs [\#98](https://github.com/pyapp-kit/in-n-out/pull/98) ([lucyleeow](https://github.com/lucyleeow))
+
+**Merged pull requests:**
+
+- chore: use ruff-format, general updates [\#107](https://github.com/pyapp-kit/in-n-out/pull/107) ([tlambert03](https://github.com/tlambert03))
+- ci\(dependabot\): bump softprops/action-gh-release from 1 to 2 [\#105](https://github.com/pyapp-kit/in-n-out/pull/105) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(dependabot\): bump actions/cache from 3 to 4 [\#103](https://github.com/pyapp-kit/in-n-out/pull/103) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(pre-commit.ci\): autoupdate [\#101](https://github.com/pyapp-kit/in-n-out/pull/101) ([pre-commit-ci[bot]](https://github.com/apps/pre-commit-ci))
+- ci\(dependabot\): bump actions/setup-python from 4 to 5 [\#97](https://github.com/pyapp-kit/in-n-out/pull/97) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(pre-commit.ci\): autoupdate [\#96](https://github.com/pyapp-kit/in-n-out/pull/96) ([pre-commit-ci[bot]](https://github.com/apps/pre-commit-ci))
+- ci\(dependabot\): bump CodSpeedHQ/action from 1 to 2 [\#95](https://github.com/pyapp-kit/in-n-out/pull/95) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(dependabot\): bump conda-incubator/setup-miniconda from 2 to 3 [\#94](https://github.com/pyapp-kit/in-n-out/pull/94) ([dependabot[bot]](https://github.com/apps/dependabot))
+- ci\(pre-commit.ci\): autoupdate [\#92](https://github.com/pyapp-kit/in-n-out/pull/92) ([pre-commit-ci[bot]](https://github.com/apps/pre-commit-ci))
+- docs: add documentation [\#77](https://github.com/pyapp-kit/in-n-out/pull/77) ([tlambert03](https://github.com/tlambert03))
+- ci: use reusable workflow [\#76](https://github.com/pyapp-kit/in-n-out/pull/76) ([tlambert03](https://github.com/tlambert03))
+
 ## [v0.1.9](https://github.com/pyapp-kit/in-n-out/tree/v0.1.9) (2023-10-10)
 
 [Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.8...v0.1.9)
