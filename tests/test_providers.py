@@ -32,7 +32,7 @@ def test_register_providers(type, provider, ask_type, expect):
     assert not ino.provide(ask_type)  # make sure context manager cleaned up
 
 
-def test_provider_decorator(test_store: ino.Store):
+def test_provider_decorator(test_store: ino.Store) -> None:
     """Test the @provider decorator."""
     assert not test_store.provide(int)
 
@@ -47,7 +47,7 @@ def test_provider_decorator(test_store: ino.Store):
     assert not test_store.provide(int)
 
 
-def test_optional_providers(test_store: ino.Store):
+def test_optional_providers(test_store: ino.Store) -> None:
     """Test providing & getting Optional[type]."""
     assert not list(test_store.iter_providers(Optional[int]))
     assert not list(test_store.iter_providers(str))

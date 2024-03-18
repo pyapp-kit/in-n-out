@@ -168,7 +168,7 @@ def mark_processor(
 
 @_add_store_to_doc
 def iter_providers(
-    type_hint: object | type[T], store: str | Store | None = None
+    type_hint: type[T], store: str | Store | None = None
 ) -> Iterable[Callable[[], T | None]]:
     """Iterate over all providers of `type_hint` in `store` or the global store.
 
@@ -190,7 +190,7 @@ def iter_processors(
 
 @_add_store_to_doc
 def provide(
-    type_hint: object | type[T],
+    type_hint: type[T],
     store: str | Store | None = None,
 ) -> T | None:
     """Provide an instance of `type_hint` with providers from `store` or the global store.

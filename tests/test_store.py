@@ -38,7 +38,7 @@ def test_create_get_destroy():
     assert len(Store._instances) == 1
 
 
-def test_store_clear(test_store: Store):
+def test_store_clear(test_store: Store) -> None:
     assert not test_store._providers
     assert not test_store._processors
 
@@ -53,7 +53,7 @@ def test_store_clear(test_store: Store):
     assert not test_store._processors
 
 
-def test_store_namespace(test_store: Store):
+def test_store_namespace(test_store: Store) -> None:
     class T: ...
 
     @mark_provider(store=test_store)
@@ -64,22 +64,22 @@ def test_store_namespace(test_store: Store):
     test_store.namespace = {"Hint": T}
 
     @inject(store=test_store)
-    def use_t(t: "Hint") -> None:  # type: ignore  # noqa: F821
+    def use_t(t: "Hint") -> "Hint":  # type: ignore  # noqa: F821
         return t
 
     assert isinstance(use_t(), T)
 
     # namespace can also be a callable
-    test_store.namespace = lambda: {"Hint2": T}
+    test_store.namespace = lambda: {"Hint2": T}  # type: ignore
 
     @inject(store="test")
-    def use_t2(t: "Hint2") -> None:  # type: ignore  # noqa: F821
+    def use_t2(t: "Hint2") -> "Hint":  # type: ignore  # noqa: F821
         return t
 
     assert isinstance(use_t2(), T)
 
 
-def test_weakrefs_to_bound_methods(test_store: Store):
+def test_weakrefs_to_bound_methods(test_store: Store) -> None:
     import gc
     import weakref
 

@@ -1,6 +1,7 @@
 from collections import ChainMap
 from typing import (
     TYPE_CHECKING,
+    Any,
     Callable,
     Generic,
     Iterable,
@@ -39,7 +40,7 @@ SUBCLASS_PAIRS = [
 
 @pytest.mark.parametrize("type_", NON_SUBCLASSABLE_TYPES)
 @pytest.mark.parametrize("mode", ["provider", "processor"])
-def test_non_standard_types(test_store: "Store", type_, mode) -> None:
+def test_non_standard_types(test_store: "Store", type_: Any, mode: str) -> None:
     mock = Mock(return_value=1)
     if mode == "provider":
         test_store.register_provider(mock, type_)
@@ -60,7 +61,7 @@ def test_provider_type_error(test_store: "Store") -> None:
 
 @pytest.mark.parametrize("sub, sup", SUBCLASS_PAIRS)
 @pytest.mark.parametrize("mode", ["provider", "processor"])
-def test_subclass_pairs(test_store: "Store", sub, sup, mode) -> None:
+def test_subclass_pairs(test_store: "Store", sub: Any, sup: Any, mode: str) -> None:
     mock = Mock(return_value=1)
     if mode == "provider":
         test_store.register_provider(mock, sup)

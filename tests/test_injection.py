@@ -1,12 +1,25 @@
 import functools
 from contextlib import nullcontext
 from inspect import isgeneratorfunction
-from typing import ContextManager, Generator, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    ContextManager,
+    Generator,
+    Optional,
+    Sequence,
+    Tuple,
+)
 from unittest.mock import Mock
 
 import pytest
 
 from in_n_out import Store, _compiled, inject, inject_processors, register
+
+if TYPE_CHECKING:
+    from in_n_out._type_resolution import RaiseWarnReturnIgnore
+
+modes: Sequence["RaiseWarnReturnIgnore"] = ["raise", "warn", "return", "ignore"]
 
 
 def test_injection():
@@ -35,7 +48,7 @@ def test_inject_deps_and_providers(order):
         f = inject(inject_processors(f))
 
     with register(providers={int: lambda: 1}, processors={str: mock2}):
-        assert f() == "1"
+        assert f() == "1"  # type: ignore
         mock.assert_called_once_with(1)
         mock2.assert_called_once_with("1")
 
@@ -90,12 +103,12 @@ def test_set_processor():
 
 def test_injection_with_generator():
     @inject
-    def f(x: int) -> int:
+    def f(x: int) -> Generator[int, None, None]:
         yield x
 
     # setting the accessor to our local viewer
     with register(providers={int: lambda: 1}):
-        assert tuple(f()) == (1,)  # type: ignore
+        assert tuple(f()) == (1,)
 
 
 def test_injection_without_args():
@@ -106,25 +119,19 @@ def test_injection_without_args():
     assert inject(f) is f
 
 
-m = ["raise", "warn", "return", "ignore"]
-
-
-def unannotated(x) -> int:  # type: ignore
-    ...
-
-
-def unknown(v: "Unknown") -> int:  # type: ignore  # noqa
-    ...
-
-
-def unknown_and_unannotated(v: "Unknown", x) -> int:  # type: ignore  # noqa
-    ...
+def unannotated(x) -> int: ...  # type: ignore
+def unknown(v: "Unknown") -> int: ...  # type: ignore  #noqa
+def unknown_and_unannotated(v: "Unknown", x) -> int: ...  # type: ignore  #noqa
 
 
 @pytest.mark.parametrize("on_unresolved", modes)
 @pytest.mark.parametrize("on_unannotated", modes)
 @pytest.mark.parametrize("in_func", [unknown, unannotated, unknown_and_unannotated])
-def test_injection_errors(in_func, on_unresolved, on_unannotated):
+def test_injection_errors(
+    in_func: Callable,
+    on_unresolved: "RaiseWarnReturnIgnore",
+    on_unannotated: "RaiseWarnReturnIgnore",
+) -> None:
     ctx: ContextManager = nullcontext()
     ctxb: ContextManager = nullcontext()
     expect_same_func_back = False
