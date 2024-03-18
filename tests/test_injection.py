@@ -90,12 +90,12 @@ def test_set_processor():
 
 def test_injection_with_generator():
     @inject
-    def f(x: int):
+    def f(x: int) -> int:
         yield x
 
     # setting the accessor to our local viewer
     with register(providers={int: lambda: 1}):
-        assert tuple(f()) == (1,)
+        assert tuple(f()) == (1,)  # type: ignore
 
 
 def test_injection_without_args():
@@ -164,7 +164,7 @@ def test_injection_errors(in_func, on_unresolved, on_unannotated):
         assert (out_func is in_func) is expect_same_func_back
 
 
-def test_processors_not_passed_none(test_store: Store):
+def test_processors_not_passed_none(test_store: Store) -> None:
     @test_store.inject_processors
     def f(x: int) -> Optional[int]:
         return x if x > 5 else None
@@ -184,11 +184,11 @@ def test_processors_not_passed_none(test_store: Store):
         mock.assert_called_once_with(10)
 
 
-def test_optional_provider_with_required_arg(test_store: Store):
+def test_optional_provider_with_required_arg(test_store: Store) -> None:
     mock = Mock()
 
     @inject(store=test_store)
-    def f(x: int):
+    def f(x: int) -> None:
         mock(x)
 
     with test_store.register(providers={Optional[int]: lambda: None}):
@@ -233,7 +233,7 @@ def test_generators():
 
 
 def test_wrapped_functions():
-    def func(foo: Foo):
+    def func(foo: Foo) -> Foo:
         return foo
 
     @functools.wraps(func)
@@ -251,12 +251,12 @@ def test_wrapped_functions():
         assert injected() == foo
 
 
-def test_partial_annotations(test_store: Store):
-    def func(foo: "Foo", bar: "Bar"):  # noqa
+def test_partial_annotations(test_store: Store) -> None:
+    def func(foo: "Foo", bar: "Bar") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     # other way around
-    def func2(bar: "Bar", foo: "Foo"):  # noqa
+    def func2(bar: "Bar", foo: "Foo") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     with pytest.warns(UserWarning):

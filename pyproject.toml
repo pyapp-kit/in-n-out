@@ -128,7 +128,7 @@ show_error_codes = true
 pretty = true
 
 [[tool.mypy.overrides]]
-module = ["tests"]
+module = ["tests.*"]
 disallow_untyped_defs = false
 
 # https://github.com/mgedmin/check-manifest#configuration
