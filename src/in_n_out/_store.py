@@ -34,16 +34,14 @@ from ._util import _split_union, is_optional, issubclassable
 logger = getLogger("in_n_out")
 
 
-if TYPE_CHECKING:
-    from typing import ParamSpec
+from typing_extensions import ParamSpec
 
+if TYPE_CHECKING:
     from ._type_resolution import RaiseWarnReturnIgnore
 
     R = TypeVar("R")
-    P = ParamSpec("P")
-else:
-    P = TypeVar("P")
 
+P = ParamSpec("P")
 
 T = TypeVar("T")
 Provider = Callable[[], Any]  # provider should be able to take no arguments
@@ -82,7 +80,8 @@ CallbackIterable = Union[ProviderIterable, ProcessorIterable]
 _GLOBAL = "global"
 
 
-class _NullSentinel: ...
+class _NullSentinel:
+    pass
 
 
 class _RegisteredCallback(NamedTuple):
@@ -138,7 +137,7 @@ class InjectionContext(ContextManager):
 class Store:
     """A Store is a collection of providers and processors."""
 
-    _NULL = _NullSentinel()
+    _NULL: ClassVar = _NullSentinel()
     _instances: ClassVar[dict[str, Store]] = {}
 
     @classmethod
@@ -1050,7 +1049,7 @@ class Store:
 
         _callbacks: Iterable[CallbackTuple]
         if isinstance(callbacks, Mapping):
-            _callbacks = ((v, k) for k, v in callbacks.items())  # type: ignore  # dunno
+            _callbacks = callbacks.items()
         else:
             _callbacks = callbacks
 
@@ -1059,11 +1058,11 @@ class Store:
         for tup in _callbacks:
             callback, *rest = tup
             type_: THint | None = None
-            weight: float = 0
+            weight: float = 0.0
             if rest:
                 if len(rest) == 1:
                     type_ = rest[0]
-                    weight = 0
+                    weight = 0.0
                 elif len(rest) == 2:
                     type_, weight = cast(Tuple[Optional[THint], float], rest)
                 else:  # pragma: no cover
