@@ -11,7 +11,13 @@ if hasattr(types, "UnionType"):
 
 
 def _is_union(type_: Any) -> bool:
+    """Return True if `type_` is a Union type."""
     return get_origin(type_) in UNION_TYPES
+
+
+def is_optional(type_: Any) -> bool:
+    """Return True if `type_` is Optional[T]."""
+    return _split_union(type_)[1]
 
 
 def _split_union(type_: Any) -> Tuple[List[Type], bool]:
