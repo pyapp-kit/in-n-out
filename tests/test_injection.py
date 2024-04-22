@@ -296,3 +296,18 @@ def test_inject_into_required_optional() -> None:
     thing = Thing()
     with register(providers={Optional[Thing]: lambda: thing}):
         assert inject(f)() is thing
+
+
+def test_inject_into_optional_with_default() -> None:
+    class Thing: ...
+
+    def f(i: Optional[Thing] = None) -> Optional[Thing]:
+        return i
+
+    thing = Thing()
+    with register(providers={Optional[Thing]: lambda: thing}):
+        assert inject(f)() is thing
+    with register(providers={Thing: lambda: thing}):
+        assert inject(f)() is thing
+
+    assert inject(f)() is None
