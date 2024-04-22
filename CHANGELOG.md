@@ -1,5 +1,13 @@
 # Changelog
 
+## [v0.2.1](https://github.com/pyapp-kit/in-n-out/tree/v0.2.1) (2024-04-22)
+
+[Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.2.0...v0.2.1)
+
+**Implemented enhancements:**
+
+- feat: Try to inject parameter value if default value is None [\#110](https://github.com/pyapp-kit/in-n-out/pull/110) ([Czaki](https://github.com/Czaki))
+
 ## [v0.2.0](https://github.com/pyapp-kit/in-n-out/tree/v0.2.0) (2024-03-18)
 
 [Full Changelog](https://github.com/pyapp-kit/in-n-out/compare/v0.1.9...v0.2.0)
@@ -7,6 +15,10 @@
 **Fixed bugs:**
 
 - fix: injecting None into takes optional [\#106](https://github.com/pyapp-kit/in-n-out/pull/106) ([tlambert03](https://github.com/tlambert03))
+
+**Tests & CI:**
+
+- fix: fix ci [\#108](https://github.com/pyapp-kit/in-n-out/pull/108) ([tlambert03](https://github.com/tlambert03))
 
 **Documentation:**
 
@@ -16,7 +28,6 @@
 
 **Merged pull requests:**
 
-- fix: fix ci [\#108](https://github.com/pyapp-kit/in-n-out/pull/108) ([tlambert03](https://github.com/tlambert03))
 - chore: use ruff-format, general updates [\#107](https://github.com/pyapp-kit/in-n-out/pull/107) ([tlambert03](https://github.com/tlambert03))
 - ci\(dependabot\): bump softprops/action-gh-release from 1 to 2 [\#105](https://github.com/pyapp-kit/in-n-out/pull/105) ([dependabot[bot]](https://github.com/apps/dependabot))
 - ci\(dependabot\): bump actions/cache from 3 to 4 [\#103](https://github.com/pyapp-kit/in-n-out/pull/103) ([dependabot[bot]](https://github.com/apps/dependabot))
