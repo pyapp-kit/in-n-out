@@ -22,7 +22,7 @@ jobs:
 
 
   test:
-    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v1
+    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@main
     secrets: inherit
     with:
       os: ${{ matrix.os }}
