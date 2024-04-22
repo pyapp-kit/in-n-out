@@ -20,6 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: pipx run check-manifest
 
+
   test:
     uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v1
     secrets: inherit
