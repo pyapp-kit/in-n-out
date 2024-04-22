@@ -778,7 +778,7 @@ class Store:
                 # first, get and call the provider functions for each parameter type:
                 _injected_names: set[str] = set()
                 for param in sig.parameters.values():
-                    if param.name not in bound.arguments:
+                    if param.name not in bound.arguments or bound.arguments[param.name] is None:
                         provided = self.provide(param.annotation)
                         if provided is not None or is_optional(param.annotation):
                             logger.debug(
