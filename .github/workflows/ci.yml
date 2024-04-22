@@ -22,7 +22,8 @@ jobs:
 
   test:
     uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v1
-    secrets: inherit
+    secrets:
+      codecov-token: ${{ secrets.CODECOV_TOKEN }}
     with:
       os: ${{ matrix.os }}
       python-version: ${{ matrix.python-version }}
