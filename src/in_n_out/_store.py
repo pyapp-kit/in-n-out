@@ -839,7 +839,7 @@ class Store:
                 def _gexec(*args: P.args, **kwargs: P.kwargs) -> R:  # type: ignore
                     yield from _exec(*args, **kwargs)  # type: ignore
 
-                out = _gexec
+                out = _gexec  # type: ignore
 
             # update some metadata on the decorated function.
             out.__signature__ = sig  # type: ignore [attr-defined]
