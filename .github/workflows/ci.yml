@@ -21,7 +21,7 @@ jobs:
       - run: pipx run check-manifest
 
   test:
-    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v1
+    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v2
     secrets: inherit
     with:
       os: ${{ matrix.os }}
@@ -46,7 +46,7 @@ jobs:
             os: macos-latest
 
   test-app-model:
-    uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@v1
+    uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@v2
     with:
       dependency-repo: pyapp-kit/app-model
       dependency-extras: "qt,test,test-qt"
