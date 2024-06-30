@@ -1,0 +1,1 @@
+{"regressions": [["benchmarks.ConnectSuite.time_run_injected_func", "graphs/branch-main/machine-github-actions/pip+cython-null/python-3.10/benchmarks.ConnectSuite.time_run_injected_func.json", {}, null, 4.2146650326620425e-06, 3.5643309352553313e-06, [[null, 93, 3.5643309352553313e-06, 4.2146650326620425e-06]]]]}
