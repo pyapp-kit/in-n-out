@@ -24,7 +24,7 @@ def test_resolve_type_hints():
     assert hints["c"] == Optional[float]
 
     hints = resolve_type_hints(requires_unknown, localns={"Unknown": int})
-    assert hints["param"] == int
+    assert hints["param"] is int
 
 
 def test_resolve_single_type_hints():
@@ -65,7 +65,7 @@ def test_type_resolved_signature():
         type_resolved_signature(requires_unknown, raise_unresolved_optional_args=False)
 
     sig = type_resolved_signature(requires_unknown, localns={"Unknown": int})
-    assert sig.parameters["param"].annotation == int
+    assert sig.parameters["param"].annotation is int
 
 
 def test_partial_resolution() -> None:
@@ -162,4 +162,4 @@ def test_type_resolved_signature_mixed_global() -> None:
         raise_unresolved_required_args=False,
     )
     assert _a.parameters["a"].annotation == "unknown"
-    assert _a.parameters["b"].annotation == int
+    assert _a.parameters["b"].annotation is int
