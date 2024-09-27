@@ -801,7 +801,16 @@ class Store:
                     _injected_names,
                 )
                 try:
+                    path = []
+                    for k, v in bound.arguments.items():
+                        if hasattr(v, "_path"):
+                            v._path.append(k)
+                            v._path.insert(0, path)
+                        else:
+                            v._path = [path, k]
                     result = func(**bound.arguments)
+                    if result is not None:
+                        result._path = path
                 except TypeError as e:
                     if "missing" not in e.args[0]:
                         raise  # pragma: no cover
