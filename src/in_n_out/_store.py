@@ -742,7 +742,7 @@ class Store:
                 return func
 
             # get a signature object with all type annotations resolved
-            # this may result in a NameError if a required argument is unresolveable.
+            # this may result in a NameError if a required argument is unresolvable.
             # There may also be unannotated required arguments, which will likely fail
             # when the function is called later. We break this out into a separate
             # function to handle notifying the user on these cases.
