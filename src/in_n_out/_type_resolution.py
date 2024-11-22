@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 import types
 import typing
 import warnings
@@ -19,8 +18,6 @@ if TYPE_CHECKING:
     from typing import Literal, _get_type_hints_obj_allowed_types
 
     RaiseWarnReturnIgnore = Literal["raise", "warn", "return", "ignore"]
-
-PY39_OR_GREATER = sys.version_info >= (3, 9)
 
 
 @lru_cache(maxsize=1)
@@ -67,10 +64,12 @@ def resolve_type_hints(
     _localns = dict(_typing_names())
     if localns:
         _localns.update(localns)  # explicitly provided locals take precedence
-    kwargs: dict[str, Any] = {"globalns": globalns, "localns": _localns}
-    if PY39_OR_GREATER:
-        kwargs["include_extras"] = include_extras
-    return typing.get_type_hints(_unwrap_partial(obj), **kwargs)
+    return typing.get_type_hints(
+        _unwrap_partial(obj),
+        globalns=globalns,
+        localns=_localns,
+        include_extras=include_extras,
+    )
 
 
 def resolve_single_type_hints(
@@ -255,11 +254,8 @@ def _resolve_params_one_by_one(
                 param.annotation, globalns=globalns, localns=localns
             )[0]
         except NameError as e:
-            if (
-                param.default is param.empty
-                and exclude_unresolved_mandatory
-                or param.default is not param.empty
-                and not exclude_unresolved_optionals
+            if (param.default is param.empty and exclude_unresolved_mandatory) or (
+                param.default is not param.empty and not exclude_unresolved_optionals
             ):
                 hints[name] = param.annotation
             elif param.default is param.empty:

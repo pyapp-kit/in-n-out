@@ -1,7 +1,4 @@
-import sys
 from typing import TYPE_CHECKING
-
-import pytest
 
 import in_n_out as ino
 
@@ -9,7 +6,6 @@ if TYPE_CHECKING:
     from pytest import LogCaptureFixture
 
 
-@pytest.mark.skipif(sys.version_info < (3, 9), reason="output differs on 3.8")
 def test_logging(caplog: "LogCaptureFixture") -> None:
     caplog.set_level("DEBUG")
 

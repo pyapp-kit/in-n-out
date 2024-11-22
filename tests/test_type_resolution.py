@@ -1,5 +1,5 @@
 import types
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional
 
 import pytest
 
@@ -11,7 +11,7 @@ from in_n_out import (
 from in_n_out._type_resolution import _resolve_sig_or_inform
 
 
-def basic_sig(a: "int", b: "str", c: "Optional[float]" = None) -> int: ...  # type: ignore
+def basic_sig(a: int, b: str, c: float | None = None) -> int: ...  # type: ignore
 def requires_unknown(param: "Unknown", x) -> "Unknown": ...  # type: ignore # noqa
 def optional_unknown(param: "Unknown" = 1) -> "Unknown": ...  # type: ignore # noqa
 
@@ -117,7 +117,7 @@ def test_resolve_sig_or_inform():
 
     class Foo: ...
 
-    def func(foo: "Foo", bar: "Bar") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
+    def func(foo: "Foo", bar: "Bar") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     sig = _resolve_sig_or_inform(
@@ -132,7 +132,7 @@ def test_resolve_sig_or_inform():
     assert sig.parameters["bar"].annotation == "Bar"
 
     # other way around
-    def func2(bar: "Bar", foo: "Foo") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
+    def func2(bar: "Bar", foo: "Foo") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     sig2 = _resolve_sig_or_inform(

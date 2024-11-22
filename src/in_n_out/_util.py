@@ -1,10 +1,10 @@
 import types
-from typing import Any, List, Set, Tuple, Type, Union, cast, get_origin
+from typing import Any, Union, cast, get_origin
 
 _compiled: bool = False
 
 
-UNION_TYPES: Set[Any] = {Union}
+UNION_TYPES: set[Any] = {Union}
 if hasattr(types, "UnionType"):
     # doing it this way to deal with python-version specific linting issues
     UNION_TYPES.add(cast(Any, getattr(types, "UnionType")))  # noqa
@@ -20,7 +20,7 @@ def is_optional(type_: Any) -> bool:
     return _split_union(type_)[1]
 
 
-def _split_union(type_: Any) -> Tuple[List[Type], bool]:
+def _split_union(type_: Any) -> tuple[list[type], bool]:
     optional = False
     if _is_union(type_):
         types = []

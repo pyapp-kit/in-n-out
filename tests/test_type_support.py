@@ -1,16 +1,11 @@
 from collections import ChainMap
+from collections.abc import Iterable, Mapping, MutableMapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Generic,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
     NewType,
-    Sequence,
-    Set,
     TypeVar,
 )
 from unittest.mock import Mock
@@ -27,12 +22,12 @@ class G(Generic[T]): ...
 
 
 nt = NewType("nt", int)
-NON_SUBCLASSABLE_TYPES = ["hi", nt, List[nt], T, Callable[[int], str], G[int]]
+NON_SUBCLASSABLE_TYPES = ["hi", nt, list[nt], T, Callable[[int], str], G[int]]
 SUBCLASS_PAIRS = [
     (list, Sequence),
     (tuple, Sequence),
     (dict, Mapping),
-    (set, Set),
+    (set, set),
     (list, Iterable),
     (ChainMap, MutableMapping),
 ]
