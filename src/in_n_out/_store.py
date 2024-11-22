@@ -804,11 +804,6 @@ class Store:
                         raise  # pragma: no cover
                     # likely a required argument is still missing.
                     # show what was injected and raise
-                    _argnames = (
-                        f"arguments: {_injected_names!r}"
-                        if _injected_names
-                        else "NO arguments"
-                    )
                     logger.exception(e)
                     for param in sig.parameters.values():
                         if (
@@ -821,8 +816,13 @@ class Store:
                                 f"{list(self.iter_providers(param.annotation))}"
                             )
 
+                    mod_name = getattr(func, "__module__", "")
+                    func_name = getattr(func, "__qualname__", str(func))
+                    full_name = f"{mod_name}.{func_name}"
                     raise TypeError(
-                        f"After injecting dependencies for {_argnames}, {e}"
+                        f"Error calling in-n-out injected function {full_name!r} with "
+                        f"kwargs {bound.arguments!r}.\n\n"
+                        f"See {type(e).__name__} above for more details."
                     ) from e
 
                 return result

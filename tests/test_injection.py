@@ -69,7 +69,7 @@ def test_injection_missing():
     def f(x: int) -> int:
         return x
 
-    with pytest.raises(TypeError, match="After injecting dependencies"):
+    with pytest.raises(TypeError, match="Error calling in-n-out injected function"):
         f()
     assert f(4) == 4
     with register(providers={int: lambda: 1}):
