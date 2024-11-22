@@ -11,7 +11,7 @@ from in_n_out import (
 from in_n_out._type_resolution import _resolve_sig_or_inform
 
 
-def basic_sig(a: int, b: str, c: float | None = None) -> int: ...  # type: ignore
+def basic_sig(a: int, b: str, c: "float | None" = None) -> int: ...  # type: ignore
 def requires_unknown(param: "Unknown", x) -> "Unknown": ...  # type: ignore # noqa
 def optional_unknown(param: "Unknown" = 1) -> "Unknown": ...  # type: ignore # noqa
 
