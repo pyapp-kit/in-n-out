@@ -4,6 +4,8 @@ import contextlib
 import types
 import warnings
 import weakref
+from collections.abc import Iterable, Iterator, Mapping
+from contextlib import AbstractContextManager
 from functools import cached_property, wraps
 from inspect import CO_VARARGS, isgeneratorfunction, unwrap
 from logging import getLogger
@@ -12,15 +14,8 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    ClassVar,
-    ContextManager,
-    Iterable,
-    Iterator,
-    Literal,
-    Mapping,
     NamedTuple,
     Optional,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -34,6 +29,8 @@ logger = getLogger("in_n_out")
 
 
 if TYPE_CHECKING:
+    from typing import ClassVar, Literal
+
     from typing_extensions import ParamSpec
 
     from ._type_resolution import RaiseWarnReturnIgnore
@@ -60,10 +57,10 @@ Weight = float
 # (callback, type_hint)
 # (callback, type_hint, weight)
 ProviderTuple = Union[
-    Tuple[Provider], Tuple[Provider, THint], Tuple[Provider, THint, Weight]
+    tuple[Provider], tuple[Provider, THint], tuple[Provider, THint, Weight]
 ]
 ProcessorTuple = Union[
-    Tuple[Processor], Tuple[Processor, THint], Tuple[Processor, THint, Weight]
+    tuple[Processor], tuple[Processor, THint], tuple[Processor, THint, Weight]
 ]
 CallbackTuple = Union[ProviderTuple, ProcessorTuple]
 
@@ -95,7 +92,7 @@ class _CachedMap(NamedTuple):
     subclassable: dict[type, list[Processor | Provider]]
 
 
-class InjectionContext(ContextManager):
+class InjectionContext(AbstractContextManager):
     """Context manager for registering callbacks.
 
     Primarily used as `with store.register(...)`.
@@ -742,7 +739,7 @@ class Store:
                 return func
 
             # get a signature object with all type annotations resolved
-            # this may result in a NameError if a required argument is unresolveable.
+            # this may result in a NameError if a required argument is unresolvable.
             # There may also be unannotated required arguments, which will likely fail
             # when the function is called later. We break this out into a separate
             # function to handle notifying the user on these cases.
@@ -801,7 +798,7 @@ class Store:
                     _injected_names,
                 )
                 try:
-                    result = func(**bound.arguments)
+                    result = func(**bound.arguments)  # type: ignore[call-arg]
                 except TypeError as e:
                     if "missing" not in e.args[0]:
                         raise  # pragma: no cover
@@ -1056,7 +1053,7 @@ class Store:
                     type_ = rest[0]
                     weight = 0
                 elif len(rest) == 2:
-                    type_, weight = cast(Tuple[Optional[THint], float], rest)
+                    type_, weight = cast(tuple[Optional[THint], float], rest)
                 else:  # pragma: no cover
                     raise ValueError(f"Invalid callback tuple: {tup!r}")
 

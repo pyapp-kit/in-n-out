@@ -1,15 +1,8 @@
 import functools
-from contextlib import nullcontext
+from collections.abc import Generator, Sequence
+from contextlib import AbstractContextManager, nullcontext
 from inspect import isgeneratorfunction
-from typing import (
-    TYPE_CHECKING,
-    Callable,
-    ContextManager,
-    Generator,
-    Optional,
-    Sequence,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Callable, Optional
 from unittest.mock import Mock
 
 import pytest
@@ -24,7 +17,7 @@ modes: Sequence["RaiseWarnReturnIgnore"] = ["raise", "warn", "return", "ignore"]
 
 def test_injection():
     @inject
-    def f(i: int, s: str) -> Tuple[int, str]:
+    def f(i: int, s: str) -> tuple[int, str]:
         return (i, s)
 
     with register(providers={int: lambda: 1, str: lambda: "hi"}):
@@ -132,8 +125,8 @@ def test_injection_errors(
     on_unresolved: "RaiseWarnReturnIgnore",
     on_unannotated: "RaiseWarnReturnIgnore",
 ) -> None:
-    ctx: ContextManager = nullcontext()
-    ctxb: ContextManager = nullcontext()
+    ctx: AbstractContextManager = nullcontext()
+    ctxb: AbstractContextManager = nullcontext()
     expect_same_func_back = False
 
     UNANNOTATED_MSG = "Injecting dependencies .* with a required, unannotated param"
@@ -259,11 +252,11 @@ def test_wrapped_functions():
 
 
 def test_partial_annotations(test_store: Store) -> None:
-    def func(foo: "Foo", bar: "Bar") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
+    def func(foo: "Foo", bar: "Bar") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     # other way around
-    def func2(bar: "Bar", foo: "Foo") -> Tuple["Foo", "Bar"]:  # type: ignore # noqa
+    def func2(bar: "Bar", foo: "Foo") -> tuple["Foo", "Bar"]:  # type: ignore # noqa
         return foo, bar
 
     with pytest.warns(UserWarning):

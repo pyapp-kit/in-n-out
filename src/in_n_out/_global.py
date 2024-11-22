@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from textwrap import indent
-from typing import TYPE_CHECKING, Any, Callable, Iterable, Literal, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, overload
 
 from ._store import InjectionContext, Store
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from ._store import (
         P,
         Processor,

@@ -40,21 +40,21 @@ from ._type_resolution import (
 from ._util import _compiled
 
 __all__ = [
+    "Store",
     "_compiled",
-    "inject_processors",
     "inject",
+    "inject_processors",
     "iter_processors",
     "iter_providers",
     "mark_processor",
     "mark_provider",
     "process",
     "provide",
+    "register",
+    "register",
     "register_processor",
     "register_provider",
-    "register",
-    "register",
     "resolve_single_type_hints",
     "resolve_type_hints",
-    "Store",
     "type_resolved_signature",
 ]
