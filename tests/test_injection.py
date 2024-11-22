@@ -192,7 +192,7 @@ def test_optional_provider_with_required_arg(test_store: Store) -> None:
         mock(x)
 
     with test_store.register(providers={Optional[int]: lambda: None}):
-        with pytest.raises(TypeError, match="missing 1 required positional argument"):
+        with pytest.raises(TypeError, match="Error calling in-n-out injected function"):
             f()
         mock.assert_not_called()
 
