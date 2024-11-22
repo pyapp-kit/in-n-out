@@ -798,7 +798,7 @@ class Store:
                     _injected_names,
                 )
                 try:
-                    result = func(**bound.arguments)
+                    result = func(**bound.arguments)  # type: ignore[call-arg]
                 except TypeError as e:
                     if "missing" not in e.args[0]:
                         raise  # pragma: no cover
