@@ -132,8 +132,8 @@ def give_me_a_string(s: str) -> str:
     return s
 
 give_me_a_string()
-# TypeError: After injecting dependencies for NO arguments,
-#   give_me_a_string() missing 1 required positional argument: 's'
+# TypeError: Error calling in-n-out injected function '__main__.give_me_a_string' with kwargs {}.
+# See TypeError above for more details.
 ```
 
 !!!note "function defaults"
