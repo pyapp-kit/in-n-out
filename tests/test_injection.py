@@ -1,8 +1,8 @@
 import functools
-from collections.abc import Generator, Sequence
+from collections.abc import Callable, Generator, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING
 from unittest.mock import Mock
 
 import pytest
@@ -166,7 +166,7 @@ def test_injection_errors(
 
 def test_processors_not_passed_none(test_store: Store) -> None:
     @test_store.inject_processors
-    def f(x: int) -> Optional[int]:
+    def f(x: int) -> int | None:
         return x if x > 5 else None
 
     mock = Mock()
@@ -191,12 +191,12 @@ def test_optional_provider_with_required_arg(test_store: Store) -> None:
     def f(x: int) -> None:
         mock(x)
 
-    with test_store.register(providers={Optional[int]: lambda: None}):
+    with test_store.register(providers={int | None: lambda: None}):
         with pytest.raises(TypeError, match="Error calling in-n-out injected function"):
             f()
         mock.assert_not_called()
 
-    with test_store.register(providers={Optional[int]: lambda: 2}):
+    with test_store.register(providers={int | None: lambda: 2}):
         f()
         mock.assert_called_once_with(2)
 
@@ -275,7 +275,7 @@ def test_partial_annotations(test_store: Store) -> None:
 def test_inject_into_required_optional() -> None:
     class Thing: ...
 
-    def f(i: Optional[Thing]) -> Optional[Thing]:
+    def f(i: Thing | None) -> Thing | None:
         return i
 
     with pytest.raises(TypeError, match="missing 1 required positional argument"):
@@ -283,22 +283,22 @@ def test_inject_into_required_optional() -> None:
 
     assert inject(f)() is None  # no provider needed
 
-    with register(providers={Optional[Thing]: lambda: None}):
+    with register(providers={Thing | None: lambda: None}):
         assert inject(f)() is None
 
     thing = Thing()
-    with register(providers={Optional[Thing]: lambda: thing}):
+    with register(providers={Thing | None: lambda: thing}):
         assert inject(f)() is thing
 
 
 def test_inject_into_optional_with_default() -> None:
     class Thing: ...
 
-    def f(i: Optional[Thing] = None) -> Optional[Thing]:
+    def f(i: Thing | None = None) -> Thing | None:
         return i
 
     thing = Thing()
-    with register(providers={Optional[Thing]: lambda: thing}):
+    with register(providers={Thing | None: lambda: thing}):
         assert inject(f)() is thing
     with register(providers={Thing: lambda: thing}):
         assert inject(f)() is thing

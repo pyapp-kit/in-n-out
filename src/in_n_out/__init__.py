@@ -51,7 +51,6 @@ __all__ = [
     "process",
     "provide",
     "register",
-    "register",
     "register_processor",
     "register_provider",
     "resolve_single_type_hints",

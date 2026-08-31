@@ -5,7 +5,7 @@ import typing
 import warnings
 from functools import lru_cache, partial
 from inspect import Signature
-from typing import TYPE_CHECKING, Any, Callable, ForwardRef
+from typing import TYPE_CHECKING, Any, ForwardRef
 
 try:
     from toolz import curry
@@ -15,6 +15,7 @@ except ImportError:  # pragma: no cover
     PARTIAL_TYPES = (partial,)
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from typing import Literal, _get_type_hints_obj_allowed_types
 
     RaiseWarnReturnIgnore = Literal["raise", "warn", "return", "ignore"]

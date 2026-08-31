@@ -1,4 +1,3 @@
-from typing import Optional
 from unittest.mock import Mock
 
 import pytest
@@ -43,7 +42,7 @@ def test_store_clear(test_store: Store) -> None:
     assert not test_store._processors
 
     test_store.register(providers={int: 1})
-    test_store.register(providers={Optional[str]: None})
+    test_store.register(providers={str | None: None})
     test_store.register(processors={int: print})
     assert len(test_store._providers) == 2
     assert len(test_store._processors) == 1

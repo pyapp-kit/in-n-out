@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Optional
 
 import pytest
 
@@ -9,12 +8,12 @@ import in_n_out as ino
 def test_provider_resolution():
     with ino.register(
         providers=[
-            (lambda: None, Optional[int]),
-            (lambda: 2, Optional[int]),
+            (lambda: None, int | None),
+            (lambda: 2, int | None),
             (lambda: 1, int),
         ]
     ):
-        assert ino.Store.get_store().provide(Optional[int]) == 2
+        assert ino.Store.get_store().provide(int | None) == 2
 
 
 @pytest.mark.parametrize(
@@ -50,11 +49,11 @@ def test_provider_decorator(test_store: ino.Store) -> None:
 
 def test_optional_providers(test_store: ino.Store) -> None:
     """Test providing & getting Optional[type]."""
-    assert not list(test_store.iter_providers(Optional[int]))
+    assert not list(test_store.iter_providers(int | None))
     assert not list(test_store.iter_providers(str))
 
     @test_store.mark_provider
-    def provides_optional_int() -> Optional[int]:
+    def provides_optional_int() -> int | None:
         return 1
 
     @test_store.mark_provider
@@ -63,12 +62,12 @@ def test_optional_providers(test_store: ino.Store) -> None:
 
     assert test_store.provide(int) == 1
     # just an optional one
-    assert next(test_store.iter_providers(Optional[int])) is provides_optional_int
+    assert next(test_store.iter_providers(int | None)) is provides_optional_int
 
     # but provides_str returns a string
     assert next(test_store.iter_providers(str)) is provides_str
-    # which means it also provides an Optional[str]
-    assert next(test_store.iter_providers(Optional[str])) is provides_str
+    # which means it also provides an str | None
+    assert next(test_store.iter_providers(str | None)) is provides_str
 
     # also register a provider for int
     @test_store.mark_provider(weight=10)
@@ -78,7 +77,7 @@ def test_optional_providers(test_store: ino.Store) -> None:
     assert next(test_store.iter_providers(int)) is provides_int
     # the definite provider takes precedence
     # TODO: consider this...
-    assert next(test_store.iter_providers(Optional[int])) is provides_int
+    assert next(test_store.iter_providers(int | None)) is provides_int
 
     test_store.clear()
 

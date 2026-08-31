@@ -1,5 +1,4 @@
 from collections.abc import Sequence
-from typing import Optional, Union
 from unittest.mock import Mock
 
 import pytest
@@ -17,8 +16,8 @@ MOCK = Mock()
         (int, lambda x: MOCK(), int),  # processor can be a function
         # we can ask for a subclass of a provided types
         (Sequence, lambda x: MOCK(), list),
-        (Union[list, tuple], lambda x: MOCK(), tuple),
-        (Union[list, tuple], lambda x: MOCK(), list),
+        (list | tuple, lambda x: MOCK(), tuple),
+        (list | tuple, lambda x: MOCK(), list),
     ],
 )
 def test_set_processors(type, process, ask_type):
@@ -75,11 +74,11 @@ def test_processor_decorator(test_store: ino.Store) -> None:
 
 def test_optional_processors(test_store: ino.Store) -> None:
     """Test processing Optional[type]."""
-    assert not list(test_store.iter_processors(Optional[int]))
+    assert not list(test_store.iter_processors(int | None))
     assert not list(test_store.iter_processors(str))
 
     @test_store.mark_processor
-    def processes_int(x: int) -> Optional[int]:
+    def processes_int(x: int) -> int | None:
         return 1
 
     @test_store.mark_processor  # these decorators are equivalent
@@ -88,22 +87,22 @@ def test_optional_processors(test_store: ino.Store) -> None:
     # we don't have a processor guaranteed to take an int
     # assert not get_processor(int)
     # just an optional one
-    assert next(test_store.iter_processors(Optional[int])) is processes_int
+    assert next(test_store.iter_processors(int | None)) is processes_int
 
     # but processes_string takes a string
     assert next(test_store.iter_processors(str)) is processes_string
     # which means it also provides an Optional[str]
-    assert next(test_store.iter_processors(Optional[str])) is processes_string
+    assert next(test_store.iter_processors(str | None)) is processes_string
 
     assert next(test_store.iter_processors(int)) is processes_int
     # the definite processor takes precedence
     # TODO: consider this...
-    assert next(test_store.iter_processors(Optional[int])) is processes_int
+    assert next(test_store.iter_processors(int | None)) is processes_int
 
 
 def test_union_processors(test_store: ino.Store) -> None:
     @test_store.mark_processor
-    def processes_int_or_str(x: Union[int, str]) -> int:
+    def processes_int_or_str(x: int | str) -> int:
         return 1
 
     assert next(test_store.iter_processors(int)) is processes_int_or_str

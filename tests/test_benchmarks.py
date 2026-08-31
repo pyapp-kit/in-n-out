@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import sys
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import pytest
 
 import in_n_out as ino
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 if all(x not in {"--codspeed", "--benchmark", "tests/test_bench.py"} for x in sys.argv):
     pytest.skip("use --benchmark to run benchmark", allow_module_level=True)

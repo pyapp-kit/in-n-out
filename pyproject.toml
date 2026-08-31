@@ -8,18 +8,18 @@ build-backend = "hatchling.build"
 name = "in-n-out"
 description = " plugable dependency injection and result processing"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "BSD 3-Clause License" }
 authors = [{ email = "talley.lambert@gmail.com", name = "Talley Lambert" }]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
 dynamic = ["version"]
@@ -50,12 +50,13 @@ dev = [
     "rich",
 ]
 docs = [
-    "mkdocs-gen-files==0.5.0",
-    "mkdocs-literate-nav==0.6.1",
-    "mkdocs-material==9.5.34",
+    "mkdocs-gen-files==0.6.1",
+    "mkdocs-literate-nav==0.6.3",
+    "mkdocs-material==9.7.7",
     "mkdocs==1.6.1",
-    "mkdocstrings-python==1.11.1",
-    "griffe==1.3.0",
+    "mkdocstrings==1.0.6",
+    "mkdocstrings-python==2.0.7",
+    "griffe==2.2.0",
 ]
 
 [project.urls]
@@ -67,7 +68,7 @@ documentations = "https://ino.rtfd.io"
 [tool.ruff]
 line-length = 88
 src = ["src", "tests"]
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
 pydocstyle = { convention = "numpy" }

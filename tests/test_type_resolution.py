@@ -1,5 +1,6 @@
 import types
-from typing import Any, Callable, Optional, Union
+import typing
+from typing import Any
 
 import pytest
 
@@ -11,7 +12,7 @@ from in_n_out import (
 from in_n_out._type_resolution import _resolve_sig_or_inform
 
 
-def basic_sig(a: int, b: str, c: Union[float, None] = None) -> int: ...  # type: ignore
+def basic_sig(a: int, b: str, c: float | None = None) -> int: ...  # type: ignore
 def requires_unknown(param: "Unknown", x) -> "Unknown": ...  # type: ignore # noqa
 def optional_unknown(param: "Unknown" = 1) -> "Unknown": ...  # type: ignore # noqa
 
@@ -21,7 +22,7 @@ def test_resolve_type_hints():
         resolve_type_hints(requires_unknown)
 
     hints = resolve_type_hints(basic_sig)
-    assert hints["c"] == Optional[float]
+    assert hints["c"] == float | None
 
     hints = resolve_type_hints(requires_unknown, localns={"Unknown": int})
     assert hints["param"] is int
@@ -37,15 +38,15 @@ def test_resolve_single_type_hints():
 
     assert hints == (
         int,
-        Optional[int],
+        int | None,
         types.FunctionType,
-        Callable[..., Any],
+        typing.Callable[..., Any],
     )
 
 
 def test_type_resolved_signature():
     sig = type_resolved_signature(basic_sig)
-    assert sig.parameters["c"].annotation == Optional[float]
+    assert sig.parameters["c"].annotation == float | None
 
     with pytest.raises(NameError, match="use `raise_unresolved_optional_args=False`"):
         type_resolved_signature(optional_unknown)
