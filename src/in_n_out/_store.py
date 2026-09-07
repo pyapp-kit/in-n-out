@@ -15,7 +15,6 @@ from typing import (
     Any,
     Callable,
     NamedTuple,
-    Optional,
     TypeVar,
     Union,
     cast,
@@ -602,7 +601,7 @@ class Store:
         guess_self: bool | None = None,
     ) -> Callable[..., R]:
         ...
-        # unfortunately, the best we can do is convert the signature to Callabe[..., R]
+        # unfortunately, the best we can do is convert the signature to Callable[..., R]
         # so we lose the parameter information.  but it seems better than having
         # "missing positional args" errors everywhere on injected functions.
 
@@ -1053,7 +1052,7 @@ class Store:
                     type_ = rest[0]
                     weight = 0
                 elif len(rest) == 2:
-                    type_, weight = cast(tuple[Optional[THint], float], rest)
+                    type_, weight = cast("tuple[THint | None, float]", rest)
                 else:  # pragma: no cover
                     raise ValueError(f"Invalid callback tuple: {tup!r}")
 
