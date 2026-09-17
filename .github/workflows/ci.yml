@@ -93,7 +93,7 @@ jobs:
       codecov_token: ${{ secrets.CODECOV_TOKEN }}
 
   test-app-model:
-    uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@v2
+    uses: pyapp-kit/workflows/.github/workflows/test-dependents.yml@main
     with:
       dependency-repo: pyapp-kit/app-model
       dependency-extras: "pyqt6"
