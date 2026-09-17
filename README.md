@@ -50,17 +50,18 @@ This also supports processing *return* values as well
 (injection of intentional side effects):
 
 ```python
-
 @ino.inject_processors
 def func2(thing: Thing) -> str:
     return thing.name
 
+
 def greet_name(name: str):
     print(f"Hello, {name}!")
 
+
 ino.register_processor(greet_name)
 
-func2(Thing('Bob'))  # prints "Hello, Bob!"
+func2(Thing("Bob"))  # prints "Hello, Bob!"
 ```
 
 ### Alternatives

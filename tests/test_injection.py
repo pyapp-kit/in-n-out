@@ -2,7 +2,7 @@ import functools
 from collections.abc import Generator, Sequence
 from contextlib import AbstractContextManager, nullcontext
 from inspect import isgeneratorfunction
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 from unittest.mock import Mock
 
 import pytest
@@ -184,19 +184,20 @@ def test_processors_not_passed_none(test_store: Store) -> None:
         mock.assert_called_once_with(10)
 
 
-def test_optional_provider_with_required_arg(test_store: Store) -> None:
+@pytest.mark.parametrize("hint", [Optional[int], int | None])
+def test_optional_provider_with_required_arg(test_store: Store, hint: Any) -> None:
     mock = Mock()
 
     @inject(store=test_store)
     def f(x: int) -> None:
         mock(x)
 
-    with test_store.register(providers={Optional[int]: lambda: None}):
+    with test_store.register(providers={hint: lambda: None}):
         with pytest.raises(TypeError, match="Error calling in-n-out injected function"):
             f()
         mock.assert_not_called()
 
-    with test_store.register(providers={Optional[int]: lambda: 2}):
+    with test_store.register(providers={hint: lambda: 2}):
         f()
         mock.assert_called_once_with(2)
 

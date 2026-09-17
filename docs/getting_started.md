@@ -19,14 +19,14 @@ processors. More than one provider/processor can be registered per type.
 ```python
 from in_n_out import Store
 
-store = Store.create('my-store')
+store = Store.create("my-store")
 ```
 
 This store can be retrieved later using `Store.get_store`, and
 destroyed using `Store.destroy`.
 
 ```python
-store = Store.get_store('my-store')
+store = Store.get_store("my-store")
 
 # Store.destroy('my-store') # would destroy the store... but we still want it :)
 ```
@@ -44,6 +44,7 @@ important to our application:
 ```python
 class Thing:
     """Some thing I care about."""
+
     def __init__(self, name: str):
         self.name = name
 ```
@@ -55,8 +56,10 @@ of the function to determine what type it provides.
 ```python
 import in_n_out as ino
 
+
 def heres_the_thing() -> Thing:
     return Thing("Thing")
+
 
 # register a provider of Thing
 store.register_provider(heres_the_thing)
@@ -120,6 +123,7 @@ print(get_things_name())  # prints "Thing"
     def get_things_name(thing: Thing) -> str:
         return thing.name
 
+
     print(get_things_name())  # prints "Thing"
     ```
 
@@ -130,6 +134,7 @@ an exception:
 @store.inject
 def give_me_a_string(s: str) -> str:
     return s
+
 
 give_me_a_string()
 # TypeError: Error calling in-n-out injected function '__main__.give_me_a_string' with kwargs {}.
@@ -155,6 +160,7 @@ When registering multiple providers for the same type, you can use the
 def give_me_another_thing() -> Thing:
     return Thing("Another Thing")
 
+
 store.register_provider(give_me_another_thing, weight=10)
 print(get_things_name())  # prints "Another Thing"
 ```
@@ -167,6 +173,7 @@ providers.
 ```python
 def most_important_thing() -> Thing:
     return Thing("Most Important Thing")
+
 
 with store.register_provider(most_important_thing, weight=20):
     print(get_things_name())  # prints "Most Important Thing"
@@ -197,12 +204,14 @@ using the [`Store.register_processor`][in_n_out.Store.register_processor] method
 def get_things_name(thing: Thing) -> str:
     return thing.name
 
+
 def greet_name(name: str):
     print(f"Hello, {name}!")
 
+
 store.register_processor(greet_name)
 
-get_things_name(Thing('Bob'))  # prints "Hello, Bob!"  (and still returns "Bob")
+get_things_name(Thing("Bob"))  # prints "Hello, Bob!"  (and still returns "Bob")
 ```
 
 !!!warning "Careful"
@@ -255,13 +264,15 @@ def highlight_document(document: Document):
 from in_n_out import Store
 
 # create a store
-store = Store.create('my-store')
+store = Store.create("my-store")
+
 
 # register a Document provider
 @store.register_provider
 def get_current_document() -> Document:
     # get the current document from somewhere
     ...
+
 
 # somehow gather functionality from plugins
 from some_plugin import highlight_document

@@ -1,13 +1,10 @@
 import types
-from typing import Any, Union, cast, get_origin
+from typing import Any, Union, get_origin
 
 _compiled: bool = False
 
 
-UNION_TYPES: set[Any] = {Union}
-if hasattr(types, "UnionType"):
-    # doing it this way to deal with python-version specific linting issues
-    UNION_TYPES.add(cast(Any, getattr(types, "UnionType")))  # noqa
+UNION_TYPES: set[Any] = {Union, types.UnionType}
 
 
 def _is_union(type_: Any) -> bool:
