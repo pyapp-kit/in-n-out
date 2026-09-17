@@ -4,7 +4,7 @@ import contextlib
 import types
 import warnings
 import weakref
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import AbstractContextManager
 from functools import cached_property, wraps
 from inspect import CO_VARARGS, isgeneratorfunction, unwrap
@@ -13,11 +13,8 @@ from types import CodeType
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     NamedTuple,
-    Optional,
     TypeVar,
-    Union,
     cast,
     overload,
 )
@@ -42,7 +39,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 Provider = Callable[[], Any]  # provider should be able to take no arguments
 Processor = Callable[[Any], Any]  # a processor must take one positional arg
-PPCallback = Union[Provider, Processor]
+PPCallback = Provider | Processor
 
 # typevars that retain the signatures of the values passed in
 ProviderVar = TypeVar("ProviderVar", bound=Provider)
@@ -56,22 +53,22 @@ Weight = float
 # (callback,)
 # (callback, type_hint)
 # (callback, type_hint, weight)
-ProviderTuple = Union[
-    tuple[Provider], tuple[Provider, THint], tuple[Provider, THint, Weight]
-]
-ProcessorTuple = Union[
-    tuple[Processor], tuple[Processor, THint], tuple[Processor, THint, Weight]
-]
-CallbackTuple = Union[ProviderTuple, ProcessorTuple]
+ProviderTuple = (
+    tuple[Provider] | tuple[Provider, THint] | tuple[Provider, THint, Weight]
+)
+ProcessorTuple = (
+    tuple[Processor] | tuple[Processor, THint] | tuple[Processor, THint, Weight]
+)
+CallbackTuple = ProviderTuple | ProcessorTuple
 
 # All of the valid argument that can be passed to register()
-ProviderIterable = Union[
-    Iterable[ProviderTuple],  # e.g. register(providers=[(lambda: 1, int)])
-    Mapping[THint, Provider],  # e.g. register(providers={int: lambda: 1})
-    Mapping[THint, object],  # e.g. register(providers={int: 1})
-]
-ProcessorIterable = Union[Iterable[ProcessorTuple], Mapping[THint, Processor]]
-CallbackIterable = Union[ProviderIterable, ProcessorIterable]
+ProviderIterable = (
+    Iterable[ProviderTuple]  # e.g. register(providers=[(lambda: 1, int)])
+    | Mapping[THint, Provider]  # e.g. register(providers={int: lambda: 1})
+    | Mapping[THint, object]  # e.g. register(providers={int: 1})
+)
+ProcessorIterable = Iterable[ProcessorTuple] | Mapping[THint, Processor]
+CallbackIterable = ProviderIterable | ProcessorIterable
 
 _GLOBAL = "global"
 
@@ -602,7 +599,7 @@ class Store:
         guess_self: bool | None = None,
     ) -> Callable[..., R]:
         ...
-        # unfortunately, the best we can do is convert the signature to Callabe[..., R]
+        # unfortunately, the best we can do is convert the signature to Callable[..., R]
         # so we lose the parameter information.  but it seems better than having
         # "missing positional args" errors everywhere on injected functions.
 
@@ -1053,7 +1050,7 @@ class Store:
                     type_ = rest[0]
                     weight = 0
                 elif len(rest) == 2:
-                    type_, weight = cast(tuple[Optional[THint], float], rest)
+                    type_, weight = cast("tuple[THint | None, float]", rest)
                 else:  # pragma: no cover
                     raise ValueError(f"Invalid callback tuple: {tup!r}")
 

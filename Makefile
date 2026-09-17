@@ -9,7 +9,7 @@ build-trace:
 	cleanc
 
 check:
-	pre-commit run --all-files
+	prek run --all-files
 
 cleanc:
 	rm -f src/in_n_out/*.c
@@ -34,7 +34,7 @@ clean:
 # run benchmarks for all commits since v0.1.0
 benchmark-all:
 	pip install asv
-	asv run -j 4 --show-stderr --interleave-processes --skip-existing v0.1.0..HEAD
+	asv run -j 4 --show-stderr --interleave-processes --skip-existing v0.1.8..HEAD
 
 # compare HEAD against main
 benchmark-compare:

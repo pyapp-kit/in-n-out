@@ -34,7 +34,7 @@ def mypy_test_injection() -> None:
     injected()  # no error
     injected(1)
 
-    # unfortunately, the best we can do is convert the signature to Callabe[..., R]
+    # unfortunately, the best we can do is convert the signature to Callable[..., R]
     # so we lose the parameter information.  but it seems better than having
     # "missing positional args" errors everywhere on injected functions.
     injected(1, 2)

@@ -9,15 +9,18 @@ and minimal impact on source code.
 ```python
 import in_n_out as ino
 
+
 # register functions that provide a dependency
 @ino.register_provider
 def some_number() -> int:
     return 42
 
+
 # inject dependencies into functions
 @ino.inject
 def print_square(num: int):
-    print(num ** 2)
+    print(num**2)
+
 
 print_square()  # prints 1764
 ```
